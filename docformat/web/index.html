@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>DocFormat</title>
+    <link rel="stylesheet" href="/styles.css">
+    <script src="/app-config.js"></script>
+    <script defer src="/app.js"></script>
+  </head>
+  <body>
+    <main class="shell">
+      <section class="toolbar">
+        <div>
+          <h1>DocFormat</h1>
+          <p>本地批量转换 Office 文档，文件不离开当前机器。</p>
+          <p id="runtimePathHint" class="hint runtime-hint"></p>
+        </div>
+        <div id="engineStatus" class="status status-waiting">检查 LibreOffice 中...</div>
+      </section>
+
+      <section class="panel">
+        <div class="file-toolbar">
+          <button id="pickFiles" type="button" class="add-button">添加更多文件</button>
+          <button id="pickFolder" type="button" class="split-button">选择文件夹</button>
+          <label class="check">
+            <input id="recursive" type="checkbox" checked>
+            <span>递归</span>
+          </label>
+          <div id="scanSummary" class="muted compact">请选择文件或文件夹。</div>
+        </div>
+
+        <div class="manual-paths">
+          <div class="field">
+            <label for="sources">路径</label>
+            <textarea id="sources" rows="3" placeholder="/Users/name/Documents"></textarea>
+            <div class="actions">
+              <button id="scanSources" type="button">读取文件列表</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="fileList" class="file-list empty">
+          <div class="empty-state">选择文件或文件夹后，这里会列出待转换文件。</div>
+        </div>
+
+        <div class="output-row">
+          <div class="field">
+            <label for="outputDir">输出目录</label>
+            <input id="outputDir" type="text" placeholder="留空则写入源目录 converted/">
+          </div>
+          <button id="pickOutput" type="button">选择输出目录</button>
+        </div>
+
+        <div class="inline-options">
+          <label class="check">
+            <input id="enableAiCorrection" type="checkbox">
+            <span>转换时先做 AI 错别字修正</span>
+          </label>
+          <div id="aiConfigStatus" class="muted compact">未加载 AI 配置</div>
+        </div>
+
+        <div id="correctionPanel" class="correction-panel">
+          <div class="grid ai-config-grid">
+            <div class="field">
+              <label for="aiBaseUrl">OpenAI 兼容 API 地址</label>
+              <input id="aiBaseUrl" type="text" placeholder="https://api.openai.com/v1">
+            </div>
+            <div class="field">
+              <label for="aiApiKey">API Key</label>
+              <input id="aiApiKey" type="password" placeholder="留空则保留已保存 key">
+            </div>
+            <div class="field">
+              <label for="aiModel">模型</label>
+              <input id="aiModel" list="aiModelOptions" type="text" placeholder="先探索模型或手动输入">
+              <datalist id="aiModelOptions"></datalist>
+            </div>
+          </div>
+
+          <div class="actions primary-actions">
+            <button id="saveAiConfig" type="button">保存 AI 配置</button>
+            <button id="refreshAiModels" type="button">探索模型</button>
+          </div>
+
+          <div class="field spaced">
+            <label for="correctionPrompt">修正提示词</label>
+            <textarea id="correctionPrompt" rows="7"></textarea>
+          </div>
+
+          <div class="field spaced">
+            <label for="lexiconFiles">修正词表文件路径</label>
+            <textarea id="lexiconFiles" rows="3" placeholder="/Users/name/Documents/words.csv&#10;/Users/name/Documents/terms.json"></textarea>
+            <div class="actions">
+              <button id="pickLexiconFiles" type="button">选择词表文件</button>
+            </div>
+          </div>
+
+          <div class="section-title lexicon-title">
+            <h2>手动修正词表</h2>
+            <button id="addLexiconRow" type="button">添加一行</button>
+          </div>
+          <div class="lexicon-table-wrap">
+            <table class="lexicon-table">
+              <thead>
+                <tr>
+                  <th>错误词</th>
+                  <th>正确词</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="lexiconRows"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="convert-bar">
+          <div class="bulk-target">
+            <span>将所有（<span id="fileCount">0</span>）转换为：</span>
+            <select id="bulkTargetFormat"></select>
+          </div>
+          <button id="startJob" type="button" class="convert-button">转变</button>
+        </div>
+        <div id="formatPopover" class="format-popover" hidden>
+          <div class="format-search">⌕ 搜索格式</div>
+          <div class="format-menu">
+            <div class="format-categories">
+              <div class="category active">Document ›</div>
+              <div class="category">Image</div>
+              <div class="category">Ebook</div>
+              <div class="category">报告</div>
+            </div>
+            <div id="formatChoices" class="format-choices"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="section-title">
+          <h2>任务结果</h2>
+          <button id="cancelJob" type="button" disabled>取消任务</button>
+        </div>
+        <div id="jobSummary" class="muted">暂无任务。</div>
+        <div id="results" class="results"></div>
+      </section>
+
+      <div id="pathBrowser" class="path-browser" hidden>
+        <div class="path-browser-card">
+          <div class="section-title path-browser-title">
+            <h2 id="pathBrowserTitle">选择路径</h2>
+            <button id="closePathBrowser" type="button">关闭</button>
+          </div>
+          <div id="workspaceRoots" class="root-chips"></div>
+          <div class="browser-current">
+            <button id="browserParent" type="button">上一级</button>
+            <code id="browserPath"></code>
+          </div>
+          <div id="browserEntries" class="browser-entries"></div>
+          <div class="path-browser-actions">
+            <div id="browserSelection" class="muted compact">未选择路径</div>
+            <button id="selectCurrentDirectory" type="button">选择当前文件夹</button>
+            <button id="confirmPathSelection" type="button" class="primary">确认选择</button>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </body>
+</html>

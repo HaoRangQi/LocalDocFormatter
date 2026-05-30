@@ -1,0 +1,24 @@
+services:
+  docformat:
+    build: .
+    image: docformat:local
+    ports:
+      - "127.0.0.1:8765:8765"
+    environment:
+      DOCFORMAT_HOST: "0.0.0.0"
+      DOCFORMAT_PORT: "8765"
+      DOCFORMAT_NO_BROWSER: "1"
+      DOCFORMAT_CONTAINER: "1"
+      DOCFORMAT_WORKSPACE_ROOTS: "/workspace"
+      DOCFORMAT_AI_CONFIG_PATH: "/data/ai-config.json"
+    volumes:
+      - ./docker-data:/data
+      - ~/Documents:/workspace/Documents
+      - ~/Downloads:/workspace/Downloads
+    healthcheck:
+      test: ["CMD", "python", "-c", "import json, urllib.request; json.load(urllib.request.urlopen('http://127.0.0.1:8765/api/health', timeout=3))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
