@@ -220,3 +220,7 @@ python3 -m unittest discover -s tests
 ```text
 docs/QA_REPORT_2026-05-30.md
 ```
+
+## 致谢
+
+vibe by codex，让我们谢谢 codex。
