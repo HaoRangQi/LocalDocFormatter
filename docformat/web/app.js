@@ -591,7 +591,7 @@ function modelBadge(model) {
 function updateApiEndpointPreview() {
   const base = ($("aiBaseUrl").value || "https://api.openai.com/v1").trim().replace(/\/+$/, "");
   const v1Base = base.endsWith("/v1") ? base : `${base}/v1`;
-  $("apiEndpointPreview").textContent = `模型：${v1Base}/models；修正：${v1Base}/chat/completions`;
+  $("apiEndpointPreview").textContent = `模型：${v1Base}/models；流式修正：${v1Base}/chat/completions`;
 }
 
 function friendlyModelRefreshError(message) {

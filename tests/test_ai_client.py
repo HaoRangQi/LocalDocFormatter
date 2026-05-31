@@ -21,7 +21,15 @@ class FakeOpenAIHandler(BaseHTTPRequestHandler):
         body = self.rfile.read(length).decode("utf-8")
         self.__class__.requests.append((self.command, self.path, self.headers.get("Authorization"), body))
         if self.path == "/v1/chat/completions":
-            self._json(200, {"choices": [{"message": {"content": "修正后文本"}}]})
+            self._sse(
+                200,
+                [
+                    {"choices": [{"delta": {"role": "assistant"}}]},
+                    {"choices": [{"delta": {"content": "修正后"}}]},
+                    {"choices": [{"delta": {"content": "文本"}}]},
+                    "[DONE]",
+                ],
+            )
         elif self.path == "/v1/bad":
             self._json(401, {"error": {"message": "bad key"}})
         else:
@@ -34,6 +42,17 @@ class FakeOpenAIHandler(BaseHTTPRequestHandler):
         body = json.dumps(payload).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _sse(self, status, events):
+        body = "".join(
+            f"data: {json.dumps(event, ensure_ascii=False) if not isinstance(event, str) else event}\n\n"
+            for event in events
+        ).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "text/event-stream")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
@@ -59,7 +78,7 @@ class ClientTests(unittest.TestCase):
         self.assertEqual(models, ["gpt-a", "gpt-b"])
         self.assertEqual(FakeOpenAIHandler.requests[0][0:3], ("GET", "/v1/models", "Bearer sk-test"))
 
-    def test_chat_completion_returns_message_content(self):
+    def test_chat_completion_uses_streaming_chat_completions(self):
         client = OpenAICompatibleClient(self.base_url, "sk-test")
 
         result = client.chat_completion("gpt-a", [{"role": "user", "content": "原文"}])
@@ -68,6 +87,7 @@ class ClientTests(unittest.TestCase):
         request_body = json.loads(FakeOpenAIHandler.requests[-1][3])
         self.assertEqual(request_body["model"], "gpt-a")
         self.assertEqual(request_body["temperature"], 0)
+        self.assertTrue(request_body["stream"])
 
     def test_http_errors_are_sanitized(self):
         client = OpenAICompatibleClient(self.base_url, "sk-secret")

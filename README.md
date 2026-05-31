@@ -230,7 +230,7 @@ https://api.openai.com/v1
 https://your-relay.example.com/v1
 ```
 
-模型发现调用 `{base_url}/models`，修正调用 `{base_url}/chat/completions`。
+模型发现调用 `{base_url}/models`。文稿修正使用流式 Chat Completions：`POST {base_url}/chat/completions`，请求体包含 `stream: true`。
 
 ## 本地 API
 
