@@ -169,7 +169,44 @@ h2 {
   align-items: center;
   display: grid;
   gap: 18px;
-  grid-template-columns: minmax(260px, 0.8fr) minmax(280px, 1.2fr);
+  grid-template-columns: minmax(260px, max-content) minmax(0, 1fr);
+}
+
+.ai-status {
+  align-items: flex-start;
+  border: 1px solid transparent;
+  border-radius: var(--radius-lg);
+  display: flex;
+  font-size: 14px;
+  font-weight: 720;
+  justify-content: flex-start;
+  line-height: 1.45;
+  min-height: 52px;
+  overflow-wrap: anywhere;
+  padding: 14px 16px;
+  text-align: left;
+  white-space: normal;
+}
+
+.ai-status-neutral {
+  background: color-mix(in srgb, var(--md-secondary-container) 64%, var(--md-surface));
+  color: var(--md-on-surface-variant);
+}
+
+.ai-status-pending {
+  background: var(--md-tertiary-container);
+  color: #002022;
+}
+
+.ai-status-success {
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+}
+
+.ai-status-error {
+  background: var(--md-error-container);
+  border-color: color-mix(in srgb, var(--md-error) 38%, transparent);
+  color: var(--md-error);
 }
 
 .correction-panel {

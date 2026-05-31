@@ -421,6 +421,12 @@ function renderLexiconPreview(payload) {
   return `<div class="lexicon-preview-summary">词表文件共读取 ${payload.totalValidEntries || 0} 条有效词条。</div>${rows.join("")}`;
 }
 
+function setAiConfigStatus(message, tone = "neutral") {
+  const status = $("aiConfigStatus");
+  status.textContent = message;
+  status.className = `ai-status ai-status-${tone}`;
+}
+
 async function loadAiConfig() {
   try {
     const config = await api("/api/ai/config", { method: "GET" });
@@ -433,9 +439,9 @@ async function loadAiConfig() {
     }
     updateApiEndpointPreview();
     applyMaskedApiKey(config);
-    $("aiConfigStatus").textContent = config.hasApiKey ? `已保存 key：${config.apiKeyMasked}` : "未保存 API key";
+    setAiConfigStatus(config.hasApiKey ? `已保存 key：${config.apiKeyMasked}` : "未保存 API key", config.hasApiKey ? "success" : "neutral");
   } catch (error) {
-    $("aiConfigStatus").textContent = error.message;
+    setAiConfigStatus(error.message, "error");
   }
 }
 
@@ -450,7 +456,7 @@ function applyMaskedApiKey(config) {
 }
 
 async function saveAiConfig() {
-  $("aiConfigStatus").textContent = "保存中...";
+  setAiConfigStatus("保存中...", "pending");
   const currentValue = $("aiApiKey").value.trim();
   const apiKey = currentValue === savedApiKeyMasked ? "" : currentValue;
   try {
@@ -463,21 +469,21 @@ async function saveAiConfig() {
       }),
     });
     applyMaskedApiKey(config);
-    $("aiConfigStatus").textContent = config.hasApiKey ? `已保存 key：${config.apiKeyMasked}` : "未保存 API key";
+    setAiConfigStatus(config.hasApiKey ? `已保存 key：${config.apiKeyMasked}` : "未保存 API key", config.hasApiKey ? "success" : "neutral");
   } catch (error) {
-    $("aiConfigStatus").textContent = error.message;
+    setAiConfigStatus(error.message, "error");
   }
 }
 
 async function testAiConfig() {
-  $("aiConfigStatus").textContent = "检测中...";
+  setAiConfigStatus("检测中...", "pending");
   try {
     await saveAiConfig();
     const payload = await api("/api/ai/models/refresh", { method: "POST", body: "{}" });
     setModelOptions(payload.models || [], $("aiModel").value.trim());
-    $("aiConfigStatus").textContent = `检测通过，获取到 ${payload.models.length} 个模型。`;
+    setAiConfigStatus(`检测通过，获取到 ${payload.models.length} 个模型。`, "success");
   } catch (error) {
-    $("aiConfigStatus").textContent = friendlyModelRefreshError(error.message);
+    setAiConfigStatus(friendlyModelRefreshError(error.message), "error");
   }
 }
 
@@ -494,7 +500,7 @@ async function toggleApiKeyVisibility() {
   try {
     const payload = await api("/api/ai/config/key", { method: "GET" });
     if (!payload.hasApiKey) {
-      $("aiConfigStatus").textContent = "未保存 API key";
+      setAiConfigStatus("未保存 API key", "neutral");
       return;
     }
     input.type = "text";
@@ -502,21 +508,21 @@ async function toggleApiKeyVisibility() {
     apiKeyRevealed = true;
     $("toggleApiKeyVisibility").textContent = "🙈";
     $("toggleApiKeyVisibility").title = "隐藏 API Key";
-    $("aiConfigStatus").textContent = "API key 已显示，可复查。";
+    setAiConfigStatus("API key 已显示，可复查。", "success");
   } catch (error) {
-    $("aiConfigStatus").textContent = error.message;
+    setAiConfigStatus(error.message, "error");
   }
 }
 
 async function refreshAiModels() {
-  $("aiConfigStatus").textContent = "探索模型中...";
+  setAiConfigStatus("探索模型中...", "pending");
   try {
     await saveAiConfig();
     const payload = await api("/api/ai/models/refresh", { method: "POST", body: "{}" });
     setModelOptions(payload.models || [], $("aiModel").value.trim());
-    $("aiConfigStatus").textContent = `找到 ${payload.models.length} 个模型`;
+    setAiConfigStatus(`找到 ${payload.models.length} 个模型`, "success");
   } catch (error) {
-    $("aiConfigStatus").textContent = friendlyModelRefreshError(error.message);
+    setAiConfigStatus(friendlyModelRefreshError(error.message), "error");
   }
 }
 
@@ -538,11 +544,11 @@ function setModelOptions(models, selectedModel = "") {
 function addManualModel() {
   const model = $("aiModel").value.trim();
   if (!model) {
-    $("aiConfigStatus").textContent = "请先输入模型名。";
+    setAiConfigStatus("请先输入模型名。", "neutral");
     return;
   }
   setModelOptions([model, ...modelOptions], model);
-  $("aiConfigStatus").textContent = `已添加模型：${model}`;
+  setAiConfigStatus(`已添加模型：${model}`, "success");
 }
 
 function renderModelList() {
