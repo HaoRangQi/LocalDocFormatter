@@ -104,10 +104,7 @@ class HTTPAPITests(unittest.TestCase):
             {"baseUrl": "https://relay.example.com/v1", "apiKey": "sk-secret-value", "selectedModel": "gpt-a"},
         )
 
-        status, payload = self.post_json(
-            "/v1/models",
-            {"baseUrl": "https://relay.example.com/v1", "apiKey": "sk-secret-value", "selectedModel": "gpt-a"},
-        )
+        status, payload = self.get_json("/v1/models")
 
         self.assertEqual(status, 200)
         self.assertEqual(payload["models"], ["gpt-a", "gpt-b"])

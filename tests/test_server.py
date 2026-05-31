@@ -144,7 +144,7 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(json.loads(body)["models"], ["gpt-a", "gpt-b"])
         self.assertNotIn("sk-secret-value", body)
 
-    def test_v1_models_post_payload_overrides_saved_config(self):
+    def test_v1_models_authorization_header_overrides_saved_key(self):
         seen = {}
 
         class FakeClient:
@@ -170,15 +170,15 @@ class ServerTests(unittest.TestCase):
                 {"X-DocFormat-Token": "test-token"},
             )
             status, headers, body = app.handle_json(
-                "POST",
+                "GET",
                 "/v1/models",
-                {"baseUrl": "https://relay.example.com/v1", "apiKey": "sk-live", "selectedModel": "gpt-live"},
-                {"X-DocFormat-Token": "test-token"},
+                None,
+                {"X-DocFormat-Token": "test-token", "Authorization": "Bearer sk-live"},
             )
 
         self.assertEqual(status, 200)
         self.assertEqual(json.loads(body)["models"], ["gpt-live"])
-        self.assertEqual(seen, {"base_url": "https://relay.example.com/v1", "api_key": "sk-live"})
+        self.assertEqual(seen, {"base_url": "https://old.example.com/v1", "api_key": "sk-live"})
         self.assertNotIn("sk-live", body)
 
     def test_old_ai_models_endpoint_is_not_supported(self):

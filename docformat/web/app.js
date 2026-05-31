@@ -481,21 +481,14 @@ async function saveAiConfig() {
   }
 }
 
-function buildModelDiscoveryPayload() {
-  return {
-    baseUrl: $("aiBaseUrl").value.trim(),
-    apiKey: $("aiApiKey").value.trim(),
-    apiKeyMasked: savedApiKeyMasked,
-    selectedModel: $("aiModel").value.trim(),
-  };
-}
-
 async function testAiConfig() {
   setAiConfigStatus("检测中...", "pending");
   try {
+    const config = await saveAiConfig();
+    const apiKey = await currentAiApiKey(config);
     const payload = await api("/v1/models", {
-      method: "POST",
-      body: JSON.stringify(buildModelDiscoveryPayload()),
+      method: "GET",
+      headers: { "Authorization": `Bearer ${apiKey}` },
     });
     setModelOptions(payload.models || [], $("aiModel").value.trim());
     setAiConfigStatus(`检测通过，获取到 ${payload.models.length} 个模型。`, "success");
@@ -534,15 +527,29 @@ async function toggleApiKeyVisibility() {
 async function refreshAiModels() {
   setAiConfigStatus("探索模型中...", "pending");
   try {
+    const config = await saveAiConfig();
+    const apiKey = await currentAiApiKey(config);
     const payload = await api("/v1/models", {
-      method: "POST",
-      body: JSON.stringify(buildModelDiscoveryPayload()),
+      method: "GET",
+      headers: { "Authorization": `Bearer ${apiKey}` },
     });
     setModelOptions(payload.models || [], $("aiModel").value.trim());
     setAiConfigStatus(`找到 ${payload.models.length} 个模型`, "success");
   } catch (error) {
     setAiConfigStatus(friendlyModelRefreshError(error.message), "error");
   }
+}
+
+async function currentAiApiKey(config) {
+  const currentValue = $("aiApiKey").value.trim();
+  if (currentValue && currentValue !== savedApiKeyMasked) {
+    return currentValue;
+  }
+  if (!config.hasApiKey) {
+    throw new Error("API key is required");
+  }
+  const payload = await api("/api/ai/config/key", { method: "GET" });
+  return payload.apiKey || "";
 }
 
 function setModelOptions(models, selectedModel = "") {

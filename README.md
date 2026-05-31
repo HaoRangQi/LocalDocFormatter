@@ -245,7 +245,7 @@ https://your-relay.example.com/v1
 - `GET /api/browse?path=...`
 - `GET /api/ai/config`
 - `POST /api/ai/config`
-- `POST /v1/models`：本地模型列表代理，请求体带 `baseUrl`、`apiKey`、`selectedModel`，服务端再按 OpenAI Models API 转发到 `{base_url}/models`
+- `GET /v1/models`：本地模型列表代理，使用 `Authorization: Bearer <api_key>`，服务端再按 OpenAI Models API 转发到 `{base_url}/models`
 - `POST /api/ai/correction-jobs`
 - `GET /api/ai/correction-jobs/{id}`
 - `POST /api/ai/correction-jobs/{id}/cancel`

@@ -15,7 +15,7 @@ import webbrowser
 
 from . import __version__
 from .ai_client import OpenAICompatibleClient, OpenAICompatibleError
-from .ai_config import AIConfig, AIConfigStore, normalize_base_url
+from .ai_config import AIConfigStore
 from .ai_jobs import AICorrectionJobManager, ai_job_to_dict
 from .ai_jobs import sanitize_error
 from .config import discover_soffice
@@ -50,8 +50,8 @@ class DocFormatApp:
         if method == "GET" and route == "/api/health":
             return self._json(HTTPStatus.OK, self.health_payload())
 
-        if method in {"GET", "POST"} and route == "/v1/models":
-            return self._handle_ai_models(headers, payload)
+        if method == "GET" and route == "/v1/models":
+            return self._handle_ai_models(headers)
 
         if route.startswith("/api/ai/"):
             return self._handle_ai(method, route, payload, headers)
@@ -239,33 +239,18 @@ class DocFormatApp:
 
         return self._json(HTTPStatus.NOT_FOUND, {"error": "Not found"})
 
-    def _handle_ai_models(self, headers: dict[str, str], payload: dict | None = None) -> tuple[int, dict[str, str], str]:
+    def _handle_ai_models(self, headers: dict[str, str]) -> tuple[int, dict[str, str], str]:
         if not self._authorized(headers):
             return self._json(HTTPStatus.FORBIDDEN, {"error": "Invalid local token"})
-        config = self._models_config_from_payload(payload)
-        if not config.api_key:
+        config = self.ai_config_store.load()
+        api_key = authorization_bearer_token(headers) or config.api_key
+        if not api_key:
             return self._json(HTTPStatus.BAD_REQUEST, {"error": "API key is required"})
         try:
-            models = self.ai_client_class(config.base_url, config.api_key).list_models()
+            models = self.ai_client_class(config.base_url, api_key).list_models()
         except OpenAICompatibleError as exc:
-            return self._json(HTTPStatus.BAD_GATEWAY, {"error": sanitize_error(str(exc), config.api_key)})
+            return self._json(HTTPStatus.BAD_GATEWAY, {"error": sanitize_error(str(exc), api_key)})
         return self._json(HTTPStatus.OK, {"models": models})
-
-    def _models_config_from_payload(self, payload: dict | None) -> AIConfig:
-        saved = self.ai_config_store.load()
-        if not payload:
-            return saved
-        base_url = str(payload.get("baseUrl") or saved.base_url).strip()
-        api_key = str(payload.get("apiKey") or "").strip()
-        api_key_masked = str(payload.get("apiKeyMasked") or "").strip()
-        selected_model = str(payload.get("selectedModel") or saved.selected_model).strip()
-        if api_key_masked and api_key == api_key_masked:
-            api_key = saved.api_key
-        return AIConfig(
-            base_url=normalize_base_url(base_url),
-            api_key=api_key or saved.api_key,
-            selected_model=selected_model,
-        )
 
     def health_payload(self) -> dict:
         info = discover_soffice()
@@ -411,6 +396,16 @@ def _preview_lexicon_file(path_text: str) -> dict:
         "sample": [{"wrong": wrong, "correct": correct} for wrong, correct in pairs[:5]],
         "error": None,
     }
+
+
+def authorization_bearer_token(headers: dict[str, str]) -> str:
+    for key, value in headers.items():
+        if key.lower() != "authorization":
+            continue
+        scheme, _, token = value.strip().partition(" ")
+        if scheme.lower() == "bearer" and token.strip():
+            return token.strip()
+    return ""
 
 
 def pick_paths(kind: str) -> list[str]:
