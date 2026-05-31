@@ -61,28 +61,42 @@
         </div>
 
         <div id="correctionPanel" class="correction-panel">
-          <div class="grid ai-config-grid">
-            <div class="field">
-              <label for="aiBaseUrl">OpenAI 兼容 API 地址</label>
-              <input id="aiBaseUrl" type="text" placeholder="https://api.openai.com/v1">
-            </div>
-            <div class="field">
-              <label for="aiApiKey">API Key</label>
+          <div class="model-settings">
+            <div class="setting-row">
+              <div class="setting-heading">
+                <label for="aiApiKey">API 密钥</label>
+              </div>
               <div class="secret-field">
                 <input id="aiApiKey" type="password" autocomplete="off" placeholder="未保存 API key">
                 <button id="toggleApiKeyVisibility" type="button" class="icon-button secret-toggle" title="显示或隐藏 API Key">👁</button>
+                <button id="testAiConfig" type="button" class="setting-action">检测</button>
               </div>
+              <div class="setting-hint">多个密钥使用英文逗号分隔；保存后默认显示脱敏 key。</div>
             </div>
-            <div class="field">
-              <label for="aiModel">模型</label>
+
+            <div class="setting-row">
+              <div class="setting-heading">
+                <label for="aiBaseUrl">API 地址</label>
+              </div>
+              <input id="aiBaseUrl" type="text" placeholder="https://api.openai.com/v1">
+              <div id="apiEndpointPreview" class="setting-hint"></div>
+            </div>
+
+            <div class="setting-row">
+              <div class="setting-heading model-heading">
+                <label for="aiModel">模型</label>
+                <span id="modelCountBadge" class="count-badge">0</span>
+                <button id="refreshAiModels" type="button" class="setting-action">获取模型列表</button>
+                <button id="addManualModel" type="button" class="icon-button add-model" title="添加当前输入模型">+</button>
+              </div>
               <input id="aiModel" list="aiModelOptions" type="text" placeholder="先探索模型或手动输入">
               <datalist id="aiModelOptions"></datalist>
+              <div id="modelList" class="model-list"></div>
             </div>
-          </div>
 
-          <div class="actions primary-actions">
-            <button id="saveAiConfig" type="button">保存 AI 配置</button>
-            <button id="refreshAiModels" type="button">探索模型</button>
+            <div class="actions primary-actions">
+              <button id="saveAiConfig" type="button">保存 AI 配置</button>
+            </div>
           </div>
 
           <div class="field spaced">

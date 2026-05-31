@@ -84,18 +84,6 @@ h2 {
   padding-right: 24px;
 }
 
-.grid {
-  display: grid;
-  grid-template-columns: 1fr 1.5fr auto;
-  gap: 16px;
-  align-items: end;
-  margin-top: 16px;
-}
-
-.ai-config-grid {
-  grid-template-columns: 1.25fr 1fr 1fr;
-}
-
 .inline-options {
   display: grid;
   grid-template-columns: minmax(220px, 0.8fr) minmax(280px, 1.2fr);
@@ -122,10 +110,41 @@ h2 {
   gap: 8px;
 }
 
+.model-settings {
+  display: grid;
+  gap: 22px;
+}
+
+.setting-row {
+  display: grid;
+  gap: 10px;
+}
+
+.setting-heading {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.setting-heading label {
+  font-size: 18px;
+}
+
+.model-heading {
+  justify-content: flex-start;
+}
+
+.setting-hint {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
 .secret-field {
   display: grid;
   gap: 8px;
-  grid-template-columns: minmax(0, 1fr) 44px;
+  grid-template-columns: minmax(0, 1fr) 44px auto;
 }
 
 .secret-toggle {
@@ -133,6 +152,80 @@ h2 {
   border-radius: 6px;
   font-size: 18px;
   min-height: 42px;
+}
+
+.setting-action,
+.add-model {
+  min-height: 42px;
+}
+
+.count-badge {
+  align-items: center;
+  background: #eef0f7;
+  border-radius: 999px;
+  color: var(--muted);
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 800;
+  justify-content: center;
+  min-width: 32px;
+  padding: 4px 10px;
+}
+
+.model-list {
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  max-height: 280px;
+  overflow: auto;
+}
+
+.model-item {
+  align-items: center;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  display: grid;
+  font-weight: 650;
+  gap: 12px;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  min-height: 58px;
+  padding: 8px 14px;
+  text-align: left;
+  width: 100%;
+}
+
+.model-item:hover,
+.model-item.selected {
+  background: #eef2ff;
+}
+
+.model-dot {
+  align-items: center;
+  background: linear-gradient(135deg, #8b5cf6, #22d3ee);
+  border-radius: 999px;
+  color: #fff;
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 900;
+  height: 32px;
+  justify-content: center;
+  text-transform: uppercase;
+  width: 32px;
+}
+
+.model-name {
+  overflow-wrap: anywhere;
+}
+
+.model-actions {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.empty-models {
+  color: var(--muted);
+  padding: 18px 14px;
 }
 
 label {

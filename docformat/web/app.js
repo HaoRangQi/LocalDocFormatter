@@ -4,6 +4,7 @@ let pollTimer = null;
 let scannedFiles = [];
 let savedApiKeyMasked = "";
 let apiKeyRevealed = false;
+let modelOptions = [];
 let runtimeInfo = { container: false, workspaceRoots: [], pathHint: "" };
 let pathBrowserState = {
   mode: "files",
@@ -425,6 +426,12 @@ async function loadAiConfig() {
     const config = await api("/api/ai/config", { method: "GET" });
     $("aiBaseUrl").value = config.baseUrl || "https://api.openai.com/v1";
     $("aiModel").value = config.selectedModel || "";
+    if (config.selectedModel) {
+      setModelOptions([config.selectedModel], config.selectedModel);
+    } else {
+      renderModelList();
+    }
+    updateApiEndpointPreview();
     applyMaskedApiKey(config);
     $("aiConfigStatus").textContent = config.hasApiKey ? `已保存 key：${config.apiKeyMasked}` : "未保存 API key";
   } catch (error) {
@@ -462,6 +469,18 @@ async function saveAiConfig() {
   }
 }
 
+async function testAiConfig() {
+  $("aiConfigStatus").textContent = "检测中...";
+  try {
+    await saveAiConfig();
+    const payload = await api("/api/ai/models/refresh", { method: "POST", body: "{}" });
+    setModelOptions(payload.models || [], $("aiModel").value.trim());
+    $("aiConfigStatus").textContent = `检测通过，获取到 ${payload.models.length} 个模型。`;
+  } catch (error) {
+    $("aiConfigStatus").textContent = friendlyModelRefreshError(error.message);
+  }
+}
+
 async function toggleApiKeyVisibility() {
   const input = $("aiApiKey");
   if (apiKeyRevealed) {
@@ -494,16 +513,73 @@ async function refreshAiModels() {
   try {
     await saveAiConfig();
     const payload = await api("/api/ai/models/refresh", { method: "POST", body: "{}" });
-    $("aiModelOptions").innerHTML = payload.models
-      .map((model) => `<option value="${escapeHtml(model)}"></option>`)
-      .join("");
-    if (!$("aiModel").value && payload.models[0]) {
-      $("aiModel").value = payload.models[0];
-    }
+    setModelOptions(payload.models || [], $("aiModel").value.trim());
     $("aiConfigStatus").textContent = `找到 ${payload.models.length} 个模型`;
   } catch (error) {
     $("aiConfigStatus").textContent = friendlyModelRefreshError(error.message);
   }
+}
+
+function setModelOptions(models, selectedModel = "") {
+  const next = [];
+  for (const model of [selectedModel, ...models]) {
+    const value = String(model || "").trim();
+    if (value && !next.includes(value)) {
+      next.push(value);
+    }
+  }
+  modelOptions = next;
+  if (!$("aiModel").value && modelOptions[0]) {
+    $("aiModel").value = modelOptions[0];
+  }
+  renderModelList();
+}
+
+function addManualModel() {
+  const model = $("aiModel").value.trim();
+  if (!model) {
+    $("aiConfigStatus").textContent = "请先输入模型名。";
+    return;
+  }
+  setModelOptions([model, ...modelOptions], model);
+  $("aiConfigStatus").textContent = `已添加模型：${model}`;
+}
+
+function renderModelList() {
+  $("aiModelOptions").innerHTML = modelOptions.map((model) => `<option value="${escapeHtml(model)}"></option>`).join("");
+  $("modelCountBadge").textContent = String(modelOptions.length);
+  $("modelList").innerHTML = modelOptions.length
+    ? modelOptions.map(renderModelItem).join("")
+    : '<div class="empty-models">暂无模型，点击“获取模型列表”或手动输入后点 +。</div>';
+  for (const button of document.querySelectorAll(".model-item")) {
+    button.addEventListener("click", () => {
+      $("aiModel").value = button.dataset.model || "";
+      renderModelList();
+    });
+  }
+}
+
+function renderModelItem(model) {
+  const selected = model === $("aiModel").value.trim();
+  return `<button type="button" class="model-item ${selected ? "selected" : ""}" data-model="${escapeHtml(model)}">
+    <span class="model-dot">${escapeHtml(modelBadge(model))}</span>
+    <span class="model-name">${escapeHtml(model)}</span>
+    <span class="model-actions">◉ ⚙</span>
+  </button>`;
+}
+
+function modelBadge(model) {
+  const value = model.toLowerCase();
+  if (value.includes("image")) return "img";
+  if (value.includes("gpt-5")) return "5";
+  if (value.includes("gpt-4")) return "4";
+  return "AI";
+}
+
+function updateApiEndpointPreview() {
+  const base = ($("aiBaseUrl").value || "https://api.openai.com/v1").trim().replace(/\/+$/, "");
+  const endpoint = base.endsWith("/v1") ? `${base}/chat/completions` : `${base}/v1/chat/completions`;
+  $("apiEndpointPreview").textContent = `预览：${endpoint}`;
 }
 
 function friendlyModelRefreshError(message) {
@@ -688,7 +764,11 @@ window.addEventListener("DOMContentLoaded", () => {
   $("cancelJob").addEventListener("click", cancelJob);
   $("saveAiConfig").addEventListener("click", saveAiConfig);
   $("refreshAiModels").addEventListener("click", refreshAiModels);
+  $("testAiConfig").addEventListener("click", testAiConfig);
+  $("addManualModel").addEventListener("click", addManualModel);
   $("toggleApiKeyVisibility").addEventListener("click", toggleApiKeyVisibility);
+  $("aiBaseUrl").addEventListener("input", updateApiEndpointPreview);
+  $("aiModel").addEventListener("input", renderModelList);
   $("pickLexiconFiles").addEventListener("click", async () => appendLexiconPaths(await pick("files")));
   $("previewLexiconFiles").addEventListener("click", previewLexiconFiles);
   $("lexiconFiles").addEventListener("input", () => {
