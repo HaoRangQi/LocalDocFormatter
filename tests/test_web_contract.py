@@ -40,6 +40,7 @@ class WebContractTests(unittest.TestCase):
         self.assertIn("setAiConfigStatus", script)
         self.assertIn("aiConfigSummary", script)
         self.assertIn('"/v1/models"', script)
+        self.assertIn("buildModelDiscoveryPayload", script)
         self.assertNotIn('"/api/ai/models"', script)
         self.assertIn('type="button"', index)
         self.assertIn("👁", index)

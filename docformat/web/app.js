@@ -481,11 +481,22 @@ async function saveAiConfig() {
   }
 }
 
+function buildModelDiscoveryPayload() {
+  return {
+    baseUrl: $("aiBaseUrl").value.trim(),
+    apiKey: $("aiApiKey").value.trim(),
+    apiKeyMasked: savedApiKeyMasked,
+    selectedModel: $("aiModel").value.trim(),
+  };
+}
+
 async function testAiConfig() {
   setAiConfigStatus("检测中...", "pending");
   try {
-    await saveAiConfig();
-    const payload = await api("/v1/models", { method: "GET" });
+    const payload = await api("/v1/models", {
+      method: "POST",
+      body: JSON.stringify(buildModelDiscoveryPayload()),
+    });
     setModelOptions(payload.models || [], $("aiModel").value.trim());
     setAiConfigStatus(`检测通过，获取到 ${payload.models.length} 个模型。`, "success");
   } catch (error) {
@@ -523,8 +534,10 @@ async function toggleApiKeyVisibility() {
 async function refreshAiModels() {
   setAiConfigStatus("探索模型中...", "pending");
   try {
-    await saveAiConfig();
-    const payload = await api("/v1/models", { method: "GET" });
+    const payload = await api("/v1/models", {
+      method: "POST",
+      body: JSON.stringify(buildModelDiscoveryPayload()),
+    });
     setModelOptions(payload.models || [], $("aiModel").value.trim());
     setAiConfigStatus(`找到 ${payload.models.length} 个模型`, "success");
   } catch (error) {

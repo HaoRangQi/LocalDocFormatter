@@ -144,6 +144,43 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(json.loads(body)["models"], ["gpt-a", "gpt-b"])
         self.assertNotIn("sk-secret-value", body)
 
+    def test_v1_models_post_payload_overrides_saved_config(self):
+        seen = {}
+
+        class FakeClient:
+            def __init__(self, base_url, api_key):
+                seen["base_url"] = base_url
+                seen["api_key"] = api_key
+
+            def list_models(self):
+                return ["gpt-live"]
+
+        with tempfile.TemporaryDirectory() as tmp:
+            app = create_app(
+                token="test-token",
+                soffice_path=None,
+                run_async=False,
+                ai_config_path=Path(tmp) / "ai.json",
+                ai_client_class=FakeClient,
+            )
+            app.handle_json(
+                "POST",
+                "/api/ai/config",
+                {"baseUrl": "https://old.example.com/v1", "apiKey": "sk-old", "selectedModel": "gpt-old"},
+                {"X-DocFormat-Token": "test-token"},
+            )
+            status, headers, body = app.handle_json(
+                "POST",
+                "/v1/models",
+                {"baseUrl": "https://relay.example.com/v1", "apiKey": "sk-live", "selectedModel": "gpt-live"},
+                {"X-DocFormat-Token": "test-token"},
+            )
+
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body)["models"], ["gpt-live"])
+        self.assertEqual(seen, {"base_url": "https://relay.example.com/v1", "api_key": "sk-live"})
+        self.assertNotIn("sk-live", body)
+
     def test_old_ai_models_endpoint_is_not_supported(self):
         app = create_app(token="test-token", soffice_path=None, run_async=False)
 
