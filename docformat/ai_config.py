@@ -19,7 +19,11 @@ class AIConfig:
 
 def normalize_base_url(base_url: str) -> str:
     value = (base_url or DEFAULT_BASE_URL).strip().rstrip("/")
-    return value or DEFAULT_BASE_URL
+    if not value:
+        return DEFAULT_BASE_URL
+    if value.endswith("/v1"):
+        return value
+    return f"{value}/v1"
 
 
 def mask_key(api_key: str) -> str:
@@ -81,4 +85,3 @@ class AIConfigStore:
             "hasApiKey": bool(config.api_key),
             "apiKeyMasked": mask_key(config.api_key),
         }
-

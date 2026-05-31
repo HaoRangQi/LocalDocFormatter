@@ -57,11 +57,12 @@
             <input id="enableAiCorrection" type="checkbox">
             <span>转换时先做 AI 错别字修正</span>
           </label>
-          <div id="aiConfigStatus" class="ai-status ai-status-neutral" role="status" aria-live="polite">未加载 AI 配置</div>
+          <div id="aiConfigSummary" class="ai-summary ai-summary-neutral">未加载 AI 配置</div>
         </div>
 
         <div id="correctionPanel" class="correction-panel">
           <div class="model-settings">
+            <div id="aiConfigStatus" class="ai-status ai-status-neutral" role="status" aria-live="polite" hidden></div>
             <div class="setting-row">
               <div class="setting-heading">
                 <label for="aiApiKey">API 密钥</label>

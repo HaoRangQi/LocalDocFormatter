@@ -223,7 +223,7 @@ AI 配置默认保存在：
 
 配置文件权限为 `0600`。前端仅接收脱敏 key 与 `hasApiKey` 状态；任务报告不会保存源文或 API key。
 
-`base_url` 需要包含 `/v1`，例如：
+`base_url` 会按 OpenAI-compatible 的 `/v1` 根地址保存。可以填写包含 `/v1` 的完整地址，也可以填写服务根地址，程序会自动补齐 `/v1`，例如：
 
 ```text
 https://api.openai.com/v1

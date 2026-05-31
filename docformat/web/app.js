@@ -423,8 +423,14 @@ function renderLexiconPreview(payload) {
 
 function setAiConfigStatus(message, tone = "neutral") {
   const status = $("aiConfigStatus");
+  const summary = $("aiConfigSummary");
+  const text = String(message || "");
+  const isError = tone === "error";
   status.textContent = message;
   status.className = `ai-status ai-status-${tone}`;
+  status.hidden = !isError;
+  summary.textContent = isError ? "模型列表获取失败" : text;
+  summary.className = `ai-summary ai-summary-${tone}`;
 }
 
 async function loadAiConfig() {
@@ -584,8 +590,8 @@ function modelBadge(model) {
 
 function updateApiEndpointPreview() {
   const base = ($("aiBaseUrl").value || "https://api.openai.com/v1").trim().replace(/\/+$/, "");
-  const endpoint = base.endsWith("/v1") ? `${base}/chat/completions` : `${base}/v1/chat/completions`;
-  $("apiEndpointPreview").textContent = `预览：${endpoint}`;
+  const v1Base = base.endsWith("/v1") ? base : `${base}/v1`;
+  $("apiEndpointPreview").textContent = `模型：${v1Base}/models；修正：${v1Base}/chat/completions`;
 }
 
 function friendlyModelRefreshError(message) {

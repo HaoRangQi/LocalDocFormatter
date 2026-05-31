@@ -5,10 +5,15 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from docformat.ai_config import AIConfigStore, mask_key
+from docformat.ai_config import AIConfigStore, mask_key, normalize_base_url
 
 
 class AIConfigTests(unittest.TestCase):
+    def test_normalize_base_url_uses_v1_root(self):
+        self.assertEqual(normalize_base_url("https://relay.example.com"), "https://relay.example.com/v1")
+        self.assertEqual(normalize_base_url("https://relay.example.com/"), "https://relay.example.com/v1")
+        self.assertEqual(normalize_base_url("https://relay.example.com/v1/"), "https://relay.example.com/v1")
+
     def test_mask_key_never_returns_full_secret(self):
         self.assertEqual(mask_key("sk-abcdefghijklmnopqrstuvwxyz"), "sk-a...wxyz")
         self.assertEqual(mask_key("short"), "*****")

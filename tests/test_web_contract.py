@@ -25,6 +25,8 @@ class WebContractTests(unittest.TestCase):
         self.assertIn('id="lexiconPreview"', index)
         self.assertIn('id="toggleApiKeyVisibility"', index)
         self.assertIn('id="testAiConfig"', index)
+        self.assertIn('id="aiConfigSummary"', index)
+        self.assertIn('class="ai-summary ai-summary-neutral"', index)
         self.assertIn('class="ai-status ai-status-neutral"', index)
         self.assertIn('id="apiEndpointPreview"', index)
         self.assertIn('id="modelCountBadge"', index)
@@ -36,6 +38,7 @@ class WebContractTests(unittest.TestCase):
         self.assertIn("updateApiEndpointPreview", script)
         self.assertIn("testAiConfig", script)
         self.assertIn("setAiConfigStatus", script)
+        self.assertIn("aiConfigSummary", script)
         self.assertIn('type="button"', index)
         self.assertIn("👁", index)
         self.assertIn("选择原文件夹", index)
@@ -48,6 +51,7 @@ class WebContractTests(unittest.TestCase):
         self.assertIn("jobStatusText", script)
         self.assertIn("fileStatusText", script)
         self.assertIn(".lexicon-preview", styles)
+        self.assertIn(".ai-summary-error", styles)
         self.assertIn(".ai-status-error", styles)
 
     def test_ui_keeps_token_header_for_mutating_and_browse_calls(self):
