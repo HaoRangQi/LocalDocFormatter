@@ -73,7 +73,7 @@ class SecurityBoundaryTests(unittest.TestCase):
                 "GET",
                 "/v1/models",
                 None,
-                {"X-DocFormat-Token": "test-token"},
+                {"X-DocFormat-Token": "test-token", "Authorization": "Bearer sk-sensitive-value"},
             )
 
         self.assertEqual(status, 502)

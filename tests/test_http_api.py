@@ -40,6 +40,14 @@ class HTTPAPITests(unittest.TestCase):
         with request.urlopen(req, timeout=5) as response:
             return response.status, json.loads(response.read().decode("utf-8"))
 
+    def get_json_with_headers(self, path, headers: dict, token=True):
+        next_headers = dict(headers)
+        if token:
+            next_headers["X-DocFormat-Token"] = self.token
+        req = request.Request(f"{self.base_url}{path}", headers=next_headers)
+        with request.urlopen(req, timeout=5) as response:
+            return response.status, json.loads(response.read().decode("utf-8"))
+
     def post_json(self, path, payload, token=True):
         headers = {"Content-Type": "application/json"}
         if token:
@@ -104,7 +112,7 @@ class HTTPAPITests(unittest.TestCase):
             {"baseUrl": "https://relay.example.com/v1", "apiKey": "sk-secret-value", "selectedModel": "gpt-a"},
         )
 
-        status, payload = self.get_json("/v1/models")
+        status, payload = self.get_json_with_headers("/v1/models", {"Authorization": "Bearer sk-secret-value"})
 
         self.assertEqual(status, 200)
         self.assertEqual(payload["models"], ["gpt-a", "gpt-b"])

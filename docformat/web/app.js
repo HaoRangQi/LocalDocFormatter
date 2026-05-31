@@ -57,14 +57,19 @@ const extFamily = {
 const $ = (id) => document.getElementById(id);
 
 async function api(path, options = {}) {
+  const method = String(options.method || "GET").toUpperCase();
   const headers = {
-    "Content-Type": "application/json",
     "X-DocFormat-Token": token,
     ...(options.headers || {}),
   };
+  const hasBody = options.body !== undefined && options.body !== null;
+  const hasContentType = Object.keys(headers).some((key) => key.toLowerCase() === "content-type");
+  if (hasBody && !hasContentType) {
+    headers["Content-Type"] = "application/json";
+  }
   let response;
   try {
-    response = await fetch(path, { ...options, headers });
+    response = await fetch(path, { ...options, method, headers });
   } catch (error) {
     throw new Error(`本地服务不可用：${error.message}`);
   }
@@ -476,8 +481,10 @@ async function saveAiConfig() {
     });
     applyMaskedApiKey(config);
     setAiConfigStatus(config.hasApiKey ? `已保存 key：${config.apiKeyMasked}` : "未保存 API key", config.hasApiKey ? "success" : "neutral");
+    return config;
   } catch (error) {
     setAiConfigStatus(error.message, "error");
+    throw error;
   }
 }
 
@@ -486,12 +493,9 @@ async function testAiConfig() {
   try {
     const config = await saveAiConfig();
     const apiKey = await currentAiApiKey(config);
-    const payload = await api("/v1/models", {
-      method: "GET",
-      headers: { "Authorization": `Bearer ${apiKey}` },
-    });
-    setModelOptions(payload.models || [], $("aiModel").value.trim());
-    setAiConfigStatus(`检测通过，获取到 ${payload.models.length} 个模型。`, "success");
+    const models = await fetchModelsFromUserBaseUrl($("aiBaseUrl").value.trim(), apiKey);
+    setModelOptions(models, $("aiModel").value.trim());
+    setAiConfigStatus(`检测通过，获取到 ${models.length} 个模型。`, "success");
   } catch (error) {
     setAiConfigStatus(friendlyModelRefreshError(error.message), "error");
   }
@@ -529,12 +533,9 @@ async function refreshAiModels() {
   try {
     const config = await saveAiConfig();
     const apiKey = await currentAiApiKey(config);
-    const payload = await api("/v1/models", {
-      method: "GET",
-      headers: { "Authorization": `Bearer ${apiKey}` },
-    });
-    setModelOptions(payload.models || [], $("aiModel").value.trim());
-    setAiConfigStatus(`找到 ${payload.models.length} 个模型`, "success");
+    const models = await fetchModelsFromUserBaseUrl($("aiBaseUrl").value.trim(), apiKey);
+    setModelOptions(models, $("aiModel").value.trim());
+    setAiConfigStatus(`找到 ${models.length} 个模型`, "success");
   } catch (error) {
     setAiConfigStatus(friendlyModelRefreshError(error.message), "error");
   }
@@ -549,7 +550,88 @@ async function currentAiApiKey(config) {
     throw new Error("API key is required");
   }
   const payload = await api("/api/ai/config/key", { method: "GET" });
-  return payload.apiKey || "";
+  if (!payload.apiKey) {
+    throw new Error("API key is required");
+  }
+  return payload.apiKey;
+}
+
+function normalizedV1BaseUrl(rawBaseUrl) {
+  const base = String(rawBaseUrl || "https://api.openai.com/v1").trim().replace(/\/+$/, "");
+  return base.endsWith("/v1") ? base : `${base}/v1`;
+}
+
+function extractProviderError(payload, status) {
+  if (payload && typeof payload === "object") {
+    if (typeof payload.error === "string" && payload.error.trim()) {
+      return payload.error.trim();
+    }
+    if (payload.error && typeof payload.error === "object" && typeof payload.error.message === "string") {
+      return payload.error.message;
+    }
+    if (typeof payload.message === "string" && payload.message.trim()) {
+      return payload.message.trim();
+    }
+  }
+  return `HTTP ${status}`;
+}
+
+async function fetchModelsFromUserBaseUrl(baseUrl, apiKey) {
+  const v1Base = normalizedV1BaseUrl(baseUrl);
+  const url = `${v1Base}/models`;
+  const errors = [];
+
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Accept": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+      },
+      mode: "cors",
+    });
+    let payload = {};
+    try {
+      payload = await response.json();
+    } catch (error) {
+      payload = {};
+    }
+    if (!response.ok) {
+      throw new Error(extractProviderError(payload, response.status));
+    }
+    const data = Array.isArray(payload.data) ? payload.data : [];
+    const models = data
+      .map((item) => (item && typeof item.id === "string" ? item.id.trim() : ""))
+      .filter(Boolean)
+      .sort((a, b) => a.localeCompare(b));
+    if (models.length) {
+      return models;
+    }
+    throw new Error("provider returned empty models list");
+  } catch (error) {
+    errors.push(`直连 ${url} 失败：${error.message}`);
+  }
+
+  try {
+    const payload = await api("/v1/models", {
+      method: "GET",
+      headers: { "Authorization": `Bearer ${apiKey}` },
+    });
+    const models = Array.isArray(payload.models)
+      ? payload.models
+          .map((item) => String(item || "").trim())
+          .filter(Boolean)
+          .sort((a, b) => a.localeCompare(b))
+      : [];
+    if (models.length) {
+      return models;
+    }
+    throw new Error("proxy returned empty models list");
+  } catch (error) {
+    errors.push(`代理 /v1/models 失败：${error.message}`);
+  }
+
+  throw new Error(errors.join("；"));
 }
 
 function setModelOptions(models, selectedModel = "") {
@@ -609,8 +691,7 @@ function modelBadge(model) {
 }
 
 function updateApiEndpointPreview() {
-  const base = ($("aiBaseUrl").value || "https://api.openai.com/v1").trim().replace(/\/+$/, "");
-  const v1Base = base.endsWith("/v1") ? base : `${base}/v1`;
+  const v1Base = normalizedV1BaseUrl($("aiBaseUrl").value);
   $("apiEndpointPreview").textContent = `模型：${v1Base}/models；流式修正：${v1Base}/chat/completions`;
 }
 

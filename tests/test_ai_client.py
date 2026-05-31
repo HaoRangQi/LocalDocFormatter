@@ -10,7 +10,15 @@ class FakeOpenAIHandler(BaseHTTPRequestHandler):
     requests = []
 
     def do_GET(self):  # noqa: N802
-        self.__class__.requests.append((self.command, self.path, self.headers.get("Authorization"), None))
+        self.__class__.requests.append(
+            (
+                self.command,
+                self.path,
+                self.headers.get("Authorization"),
+                self.headers.get("User-Agent"),
+                None,
+            )
+        )
         if self.path == "/v1/models":
             self._json(200, {"data": [{"id": "gpt-a"}, {"id": "gpt-b"}]})
         else:
@@ -19,7 +27,15 @@ class FakeOpenAIHandler(BaseHTTPRequestHandler):
     def do_POST(self):  # noqa: N802
         length = int(self.headers.get("Content-Length", "0") or "0")
         body = self.rfile.read(length).decode("utf-8")
-        self.__class__.requests.append((self.command, self.path, self.headers.get("Authorization"), body))
+        self.__class__.requests.append(
+            (
+                self.command,
+                self.path,
+                self.headers.get("Authorization"),
+                self.headers.get("User-Agent"),
+                body,
+            )
+        )
         if self.path == "/v1/chat/completions":
             self._sse(
                 200,
@@ -78,6 +94,7 @@ class ClientTests(unittest.TestCase):
 
         self.assertEqual(models, ["gpt-a", "gpt-b"])
         self.assertEqual(FakeOpenAIHandler.requests[0][0:3], ("GET", "/v1/models", "Bearer sk-test"))
+        self.assertTrue(FakeOpenAIHandler.requests[0][3].startswith("DocFormat/1.0"))
 
     def test_chat_completion_uses_streaming_chat_completions(self):
         client = OpenAICompatibleClient(self.base_url, "sk-test")
@@ -85,11 +102,12 @@ class ClientTests(unittest.TestCase):
         result = client.chat_completion("gpt-a", [{"role": "user", "content": "原文"}])
 
         self.assertEqual(result, "修正后文本")
-        request_body = json.loads(FakeOpenAIHandler.requests[-1][3])
+        request_body = json.loads(FakeOpenAIHandler.requests[-1][4])
         self.assertEqual(request_body["model"], "gpt-a")
         self.assertEqual(request_body["temperature"], 0)
         self.assertTrue(request_body["stream"])
         self.assertEqual(FakeOpenAIHandler.requests[-1][0:3], ("POST", "/v1/chat/completions", "Bearer sk-test"))
+        self.assertTrue(FakeOpenAIHandler.requests[-1][3].startswith("DocFormat/1.0"))
 
     def test_http_errors_are_sanitized(self):
         client = OpenAICompatibleClient(self.base_url, "sk-secret")

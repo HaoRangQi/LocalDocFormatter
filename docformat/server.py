@@ -243,9 +243,9 @@ class DocFormatApp:
         if not self._authorized(headers):
             return self._json(HTTPStatus.FORBIDDEN, {"error": "Invalid local token"})
         config = self.ai_config_store.load()
-        api_key = authorization_bearer_token(headers) or config.api_key
+        api_key = authorization_bearer_token(headers)
         if not api_key:
-            return self._json(HTTPStatus.BAD_REQUEST, {"error": "API key is required"})
+            return self._json(HTTPStatus.BAD_REQUEST, {"error": "Authorization Bearer API key is required"})
         try:
             models = self.ai_client_class(config.base_url, api_key).list_models()
         except OpenAICompatibleError as exc:
@@ -360,6 +360,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.send_response(HTTPStatus.OK)
             self.send_header("Content-Type", "application/javascript; charset=utf-8")
             self.send_header("Content-Length", str(len(body)))
+            self.send_header("Cache-Control", "no-store")
             self.end_headers()
             self.wfile.write(body)
             return
@@ -373,6 +374,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         self.send_response(HTTPStatus.OK)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(body)
 

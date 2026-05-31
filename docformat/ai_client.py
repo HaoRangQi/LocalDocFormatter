@@ -43,6 +43,9 @@ class OpenAICompatibleClient:
         headers = {
             "Accept": "application/json",
             "Authorization": f"Bearer {self.api_key}",
+            # Some OpenAI-compatible gateways (e.g. behind WAF/CDN) reject
+            # empty/default Python UA fingerprints for models listing.
+            "User-Agent": "DocFormat/1.0 (+https://github.com/HaoRangQi/LocalDocFormatter)",
         }
         if body is not None:
             data = json.dumps(body, ensure_ascii=False).encode("utf-8")
@@ -71,6 +74,7 @@ class OpenAICompatibleClient:
             "Accept": "text/event-stream",
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
+            "User-Agent": "DocFormat/1.0 (+https://github.com/HaoRangQi/LocalDocFormatter)",
         }
         req = request.Request(url, data=data, headers=headers, method=method)
         try:

@@ -137,12 +137,36 @@ class ServerTests(unittest.TestCase):
                 "GET",
                 "/v1/models",
                 None,
-                {"X-DocFormat-Token": "test-token"},
+                {"X-DocFormat-Token": "test-token", "Authorization": "Bearer sk-secret-value"},
             )
 
         self.assertEqual(status, 200)
         self.assertEqual(json.loads(body)["models"], ["gpt-a", "gpt-b"])
         self.assertNotIn("sk-secret-value", body)
+
+    def test_v1_models_requires_authorization_header(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            app = create_app(
+                token="test-token",
+                soffice_path=None,
+                run_async=False,
+                ai_config_path=Path(tmp) / "ai.json",
+            )
+            app.handle_json(
+                "POST",
+                "/api/ai/config",
+                {"baseUrl": "https://relay.example.com/v1", "apiKey": "sk-secret-value", "selectedModel": "gpt-a"},
+                {"X-DocFormat-Token": "test-token"},
+            )
+            status, headers, body = app.handle_json(
+                "GET",
+                "/v1/models",
+                None,
+                {"X-DocFormat-Token": "test-token"},
+            )
+
+        self.assertEqual(status, 400)
+        self.assertIn("Authorization Bearer API key is required", body)
 
     def test_v1_models_authorization_header_overrides_saved_key(self):
         seen = {}
