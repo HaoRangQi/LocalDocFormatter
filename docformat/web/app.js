@@ -61,8 +61,18 @@ async function api(path, options = {}) {
     "X-DocFormat-Token": token,
     ...(options.headers || {}),
   };
-  const response = await fetch(path, { ...options, headers });
-  const payload = await response.json();
+  let response;
+  try {
+    response = await fetch(path, { ...options, headers });
+  } catch (error) {
+    throw new Error(`本地服务不可用：${error.message}`);
+  }
+  let payload = {};
+  try {
+    payload = await response.json();
+  } catch (error) {
+    payload = {};
+  }
   if (!response.ok) {
     throw new Error(payload.error || `HTTP ${response.status}`);
   }
@@ -376,8 +386,19 @@ async function previewLexiconFiles() {
     });
     preview.innerHTML = renderLexiconPreview(payload);
   } catch (error) {
-    preview.innerHTML = `<div class="error">${escapeHtml(error.message)}</div>`;
+    preview.innerHTML = `<div class="error">${escapeHtml(friendlyLexiconPreviewError(error.message))}</div>`;
   }
+}
+
+function friendlyLexiconPreviewError(message) {
+  const text = String(message || "");
+  if (text === "Not found" || text.includes("HTTP 404")) {
+    return "词表预览接口不可用：请刷新页面并确认当前启动的是最新版 LocalDocFormatter。";
+  }
+  if (text.includes("本地服务不可用")) {
+    return `${text}。请重新启动 LocalDocFormatter 后再检查词表。`;
+  }
+  return text;
 }
 
 function renderLexiconPreview(payload) {

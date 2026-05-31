@@ -28,6 +28,7 @@ class WebContractTests(unittest.TestCase):
         self.assertIn("👁", index)
         self.assertIn("previewLexiconFiles", script)
         self.assertIn("/api/ai/lexicon/preview", script)
+        self.assertIn("friendlyLexiconPreviewError", script)
         self.assertIn("/api/ai/config/key", script)
         self.assertIn("toggleApiKeyVisibility", script)
         self.assertIn("jobStatusText", script)
