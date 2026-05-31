@@ -33,7 +33,7 @@ class DockerConfigTests(unittest.TestCase):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
 
         self.assertIn("docker compose up --build", readme)
-        self.assertIn("docker build -t docformat:local .", readme)
+        self.assertIn("docker build -t localdocformatter:local .", readme)
         self.assertIn("docker run --rm", readme)
         self.assertIn("/workspace/Documents", readme)
         self.assertIn("DOCFORMAT_WORKSPACE_ROOTS", readme)

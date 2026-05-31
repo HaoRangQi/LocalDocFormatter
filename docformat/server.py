@@ -22,6 +22,7 @@ from .config import discover_soffice
 from .converter import CALC_INPUTS, IMPRESS_INPUTS, MODERNIZE_SPECS, WRITER_INPUTS
 from .converter import is_skippable
 from .jobs import JobManager, job_to_dict
+from .text_correction import LexiconFileError, load_lexicon_file
 
 
 STATIC_DIR = Path(__file__).parent / "web"
@@ -190,6 +191,15 @@ class DocFormatApp:
                 return self._json(HTTPStatus.BAD_GATEWAY, {"error": sanitize_error(str(exc), config.api_key)})
             return self._json(HTTPStatus.OK, {"models": models})
 
+        if route == "/api/ai/lexicon/preview" and method == "POST":
+            payload = payload or {}
+            paths = payload.get("paths") or []
+            if not isinstance(paths, list) or not all(isinstance(item, str) for item in paths):
+                return self._json(HTTPStatus.BAD_REQUEST, {"error": "paths must be a list of paths"})
+            previews = [_preview_lexicon_file(path) for path in paths]
+            total = sum(item["count"] for item in previews if item["status"] == "success")
+            return self._json(HTTPStatus.OK, {"files": previews, "totalValidEntries": total})
+
         if route == "/api/ai/correction-jobs" and method == "POST":
             payload = payload or {}
             config = self.ai_config_store.load()
@@ -355,6 +365,27 @@ class RequestHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
+
+
+def _preview_lexicon_file(path_text: str) -> dict:
+    path = Path(path_text).expanduser()
+    try:
+        pairs = load_lexicon_file(path)
+    except LexiconFileError as exc:
+        return {
+            "path": str(path),
+            "status": "failed",
+            "count": 0,
+            "sample": [],
+            "error": str(exc),
+        }
+    return {
+        "path": str(path),
+        "status": "success",
+        "count": len(pairs),
+        "sample": [{"wrong": wrong, "correct": correct} for wrong, correct in pairs[:5]],
+        "error": None,
+    }
 
 
 def pick_paths(kind: str) -> list[str]:

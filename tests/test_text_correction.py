@@ -4,6 +4,7 @@ from pathlib import Path
 
 from docformat.text_correction import (
     BUILTIN_LEXICON,
+    LexiconFileError,
     build_correction_messages,
     chunk_text,
     correct_srt_text,
@@ -51,9 +52,34 @@ class TextCorrectionTests(unittest.TestCase):
             csv_path.write_text("错误词,正确词\n在见,再见\n", encoding="utf-8")
             json_path = Path(tmp) / "words.json"
             json_path.write_text('[{"wrong": "帐号", "correct": "账号"}]', encoding="utf-8")
+            jsonl_path = Path(tmp) / "words.jsonl"
+            jsonl_path.write_text('{"wrong": "欧喷AI", "correct": "OpenAI"}\n', encoding="utf-8")
+            arrow_path = Path(tmp) / "words.txt"
+            arrow_path.write_text("阿里妈妈 => 阿里巴巴\n", encoding="utf-8")
 
             self.assertEqual(load_lexicon_file(csv_path), [("在见", "再见")])
             self.assertEqual(load_lexicon_file(json_path), [("帐号", "账号")])
+            self.assertEqual(load_lexicon_file(jsonl_path), [("欧喷AI", "OpenAI")])
+            self.assertEqual(load_lexicon_file(arrow_path), [("阿里妈妈", "阿里巴巴")])
+
+    def test_load_lexicon_file_reports_missing_invalid_and_empty_files(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            with self.assertRaises(LexiconFileError) as missing:
+                load_lexicon_file(root / "missing.csv")
+            self.assertIn("词表文件不存在", str(missing.exception))
+
+            invalid_json = root / "bad.json"
+            invalid_json.write_text("{bad", encoding="utf-8")
+            with self.assertRaises(LexiconFileError) as invalid:
+                load_lexicon_file(invalid_json)
+            self.assertIn("JSON 解析失败", str(invalid.exception))
+
+            empty_csv = root / "empty.csv"
+            empty_csv.write_text("错误词,正确词\n", encoding="utf-8")
+            with self.assertRaises(LexiconFileError) as empty:
+                load_lexicon_file(empty_csv)
+            self.assertIn("没有读取到有效词条", str(empty.exception))
 
     def test_chunk_text_prefers_paragraph_boundaries(self):
         chunks = chunk_text("第一段\n\n第二段很长\n\n第三段", max_chars=8)

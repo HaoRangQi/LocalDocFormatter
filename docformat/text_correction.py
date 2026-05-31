@@ -15,6 +15,11 @@ BUILTIN_LEXICON = [
     ("因该", "应该"),
 ]
 
+
+class LexiconFileError(ValueError):
+    pass
+
+
 SYSTEM_PROMPT = """你是中文语音转写文稿的保守纠错工具。
 只允许修正明显错别字、同音误转、ASR 转译错误、专有名词误识别和必要标点。
 禁止润色、总结、扩写、缩写、改写表达风格、改变语气、重排段落或删除信息。
@@ -49,30 +54,72 @@ def normalize_lexicon_entries(entries: list[dict] | None) -> list[tuple[str, str
 
 
 def load_lexicon_file(path: Path) -> list[tuple[str, str]]:
+    path = path.expanduser()
+    if not path.exists():
+        raise LexiconFileError(f"词表文件不存在：{path}")
+    if not path.is_file():
+        raise LexiconFileError(f"词表路径不是文件：{path}")
     suffix = path.suffix.lower()
-    text = path.read_text(encoding="utf-8")
-    if suffix == ".json":
-        data = json.loads(text or "[]")
-        if isinstance(data, dict):
-            return [(str(key).strip(), str(value).strip()) for key, value in data.items() if str(key).strip() and str(value).strip()]
-        if isinstance(data, list):
-            return normalize_lexicon_entries(data)
-        return []
-    if suffix in {".csv", ".tsv"}:
-        delimiter = "\t" if suffix == ".tsv" else ","
-        rows = list(csv.reader(text.splitlines(), delimiter=delimiter))
-        pairs: list[tuple[str, str]] = []
-        for index, row in enumerate(rows):
-            if len(row) < 2:
-                continue
-            wrong = row[0].strip()
-            correct = row[1].strip()
-            if index == 0 and wrong in {"错误词", "wrong", "key"} and correct in {"正确词", "correct", "value"}:
-                continue
-            if wrong and correct:
-                pairs.append((wrong, correct))
-        return pairs
-    return parse_user_lexicon(text)
+    try:
+        text = path.read_text(encoding="utf-8-sig")
+    except UnicodeDecodeError as exc:
+        raise LexiconFileError(f"词表文件必须使用 UTF-8 编码：{path}") from exc
+    except OSError as exc:
+        raise LexiconFileError(f"词表文件读取失败：{path}：{exc}") from exc
+
+    try:
+        if suffix == ".json":
+            pairs = _load_json_lexicon(text)
+        elif suffix == ".jsonl":
+            pairs = _load_jsonl_lexicon(text)
+        elif suffix in {".csv", ".tsv"}:
+            delimiter = "\t" if suffix == ".tsv" else ","
+            pairs = _load_delimited_lexicon(text, delimiter)
+        else:
+            pairs = parse_user_lexicon(text)
+    except json.JSONDecodeError as exc:
+        raise LexiconFileError(f"词表 JSON 解析失败：{path}：第 {exc.lineno} 行第 {exc.colno} 列") from exc
+    except csv.Error as exc:
+        raise LexiconFileError(f"词表表格解析失败：{path}：{exc}") from exc
+
+    if not pairs:
+        raise LexiconFileError(f"词表文件没有读取到有效词条：{path}")
+    return pairs
+
+
+def _load_json_lexicon(text: str) -> list[tuple[str, str]]:
+    data = json.loads(text or "[]")
+    if isinstance(data, dict):
+        return [(str(key).strip(), str(value).strip()) for key, value in data.items() if str(key).strip() and str(value).strip()]
+    if isinstance(data, list):
+        return normalize_lexicon_entries(data)
+    return []
+
+
+def _load_jsonl_lexicon(text: str) -> list[tuple[str, str]]:
+    pairs: list[tuple[str, str]] = []
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        data = json.loads(line)
+        pairs.extend(normalize_lexicon_entries([data]))
+    return pairs
+
+
+def _load_delimited_lexicon(text: str, delimiter: str) -> list[tuple[str, str]]:
+    rows = list(csv.reader(text.splitlines(), delimiter=delimiter))
+    pairs: list[tuple[str, str]] = []
+    for index, row in enumerate(rows):
+        if len(row) < 2:
+            continue
+        wrong = row[0].strip()
+        correct = row[1].strip()
+        if index == 0 and wrong.lower() in {"错误词", "wrong", "key"} and correct.lower() in {"正确词", "correct", "value"}:
+            continue
+        if wrong and correct:
+            pairs.append((wrong, correct))
+    return pairs
 
 
 def build_correction_messages(

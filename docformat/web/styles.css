@@ -594,6 +594,46 @@ button.primary:hover {
   width: 92px;
 }
 
+.lexicon-preview {
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  margin-top: 10px;
+  max-height: 220px;
+  overflow: auto;
+  padding: 10px;
+}
+
+.lexicon-preview-summary {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.lexicon-preview-row {
+  border-top: 1px solid var(--line);
+  padding: 8px 0;
+}
+
+.lexicon-preview-row:first-child {
+  border-top: 0;
+}
+
+.lexicon-preview-meta {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.lexicon-sample {
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top: 6px;
+}
+
 .output-text {
   margin-top: 12px;
   min-height: 180px;
@@ -605,6 +645,29 @@ button.primary:hover {
   gap: 8px;
   margin-top: 12px;
   padding-bottom: 20px;
+}
+
+.progress-track {
+  background: #eef2ff;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  height: 26px;
+  margin: 10px 24px 6px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  align-items: center;
+  background: var(--accent);
+  color: #fff;
+  display: flex;
+  font-size: 12px;
+  font-weight: 700;
+  height: 100%;
+  justify-content: center;
+  min-width: 54px;
+  transition: width 0.2s ease;
+  width: 0;
 }
 
 .result {

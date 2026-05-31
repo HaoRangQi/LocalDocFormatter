@@ -113,6 +113,11 @@ class FakeCorrectionClient:
         return text.replace("在见", "再见")
 
 
+class BrokenCorrectionClient:
+    def chat_completion(self, model, messages):
+        raise RuntimeError("provider down")
+
+
 class JobManagerTests(unittest.TestCase):
     def test_create_job_converts_supported_files_and_writes_reports(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -259,6 +264,31 @@ class JobManagerTests(unittest.TestCase):
             self.assertIn("open ai => OpenAI", joined)
             self.assertIn("阿里妈妈 => 阿里巴巴", joined)
 
+    def test_missing_lexicon_file_fails_before_conversion(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "draft.txt"
+            source.write_text("大家在见", encoding="utf-8")
+            manager = JobManager(
+                soffice_path=None,
+                run_async=False,
+                correction_client_factory=lambda config: FakeCorrectionClient(),
+            )
+
+            job = manager.create_job(
+                [str(source)],
+                str(root / "out"),
+                "target",
+                recursive=True,
+                target_format="txt",
+                correction_config={"apiKey": "sk-secret", "selectedModel": "gpt-test"},
+                correction_lexicon_files=[str(root / "missing.csv")],
+            )
+
+            self.assertEqual(job.status, "failed")
+            self.assertIn("词表文件不存在", str(job.error))
+            self.assertEqual(job.results, [])
+
     def test_scan_files_lists_candidates_with_default_targets(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -337,6 +367,31 @@ class JobManagerTests(unittest.TestCase):
             self.assertEqual(job.results[0].source, str(selected))
             self.assertTrue((root / "out" / "selected.pdf").exists())
             self.assertFalse((root / "out" / "removed.pdf").exists())
+
+    def test_correction_failure_marks_file_failed_instead_of_pending(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "draft.txt"
+            source.write_text("大家在见", encoding="utf-8")
+            manager = JobManager(
+                soffice_path=None,
+                run_async=False,
+                correction_client_factory=lambda config: BrokenCorrectionClient(),
+            )
+
+            job = manager.create_job(
+                [str(source)],
+                str(root / "out"),
+                "target",
+                recursive=True,
+                target_format="txt",
+                correction_config={"apiKey": "sk-secret", "selectedModel": "gpt-test"},
+            )
+
+            self.assertEqual(job.status, "failed")
+            self.assertEqual(len(job.results), 1)
+            self.assertEqual(job.results[0].status, "failed")
+            self.assertIn("provider down", str(job.results[0].error))
 
 
 if __name__ == "__main__":

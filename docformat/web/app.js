@@ -92,6 +92,7 @@ function appendLexiconPaths(paths) {
   if (!paths.length) return;
   const existing = lexiconFileList();
   $("lexiconFiles").value = [...existing, ...paths].join("\n");
+  previewLexiconFiles();
 }
 
 async function pick(kind) {
@@ -356,6 +357,46 @@ function addLexiconRow(wrong = "", correct = "") {
   $("lexiconRows").appendChild(row);
 }
 
+async function previewLexiconFiles() {
+  const paths = lexiconFileList();
+  const preview = $("lexiconPreview");
+  if (!paths.length) {
+    preview.hidden = true;
+    preview.innerHTML = "";
+    return;
+  }
+  preview.hidden = false;
+  preview.innerHTML = '<div class="muted">正在读取词表...</div>';
+  try {
+    const payload = await api("/api/ai/lexicon/preview", {
+      method: "POST",
+      body: JSON.stringify({ paths }),
+    });
+    preview.innerHTML = renderLexiconPreview(payload);
+  } catch (error) {
+    preview.innerHTML = `<div class="error">${escapeHtml(error.message)}</div>`;
+  }
+}
+
+function renderLexiconPreview(payload) {
+  const rows = (payload.files || []).map((file) => {
+    const sample =
+      file.sample && file.sample.length
+        ? `<div class="lexicon-sample">${file.sample
+            .map((entry) => `${escapeHtml(entry.wrong)} => ${escapeHtml(entry.correct)}`)
+            .join("<br>")}</div>`
+        : "";
+    const error = file.error ? `<div class="error">${escapeHtml(file.error)}</div>` : "";
+    return `<div class="lexicon-preview-row ${escapeHtml(file.status)}">
+      <div class="path">${escapeHtml(file.path)}</div>
+      <div class="lexicon-preview-meta">${file.status === "success" ? `读取 ${file.count} 条` : "读取失败"}</div>
+      ${sample}
+      ${error}
+    </div>`;
+  });
+  return `<div class="lexicon-preview-summary">词表文件共读取 ${payload.totalValidEntries || 0} 条有效词条。</div>${rows.join("")}`;
+}
+
 async function loadAiConfig() {
   try {
     const config = await api("/api/ai/config", { method: "GET" });
@@ -398,8 +439,31 @@ async function refreshAiModels() {
     }
     $("aiConfigStatus").textContent = `找到 ${payload.models.length} 个模型`;
   } catch (error) {
-    $("aiConfigStatus").textContent = `${error.message}，可手动输入模型名`;
+    $("aiConfigStatus").textContent = friendlyModelRefreshError(error.message);
   }
+}
+
+function friendlyModelRefreshError(message) {
+  const text = String(message || "");
+  if (text.includes("403")) {
+    return "模型列表访问被拒绝（403）：请检查 API key 权限、base URL 或白名单，可手动输入模型名。";
+  }
+  if (text.includes("401")) {
+    return "模型列表鉴权失败（401）：请检查 API key 是否正确，可手动输入模型名。";
+  }
+  if (text.includes("404")) {
+    return "模型列表接口不存在（404）：请确认 base URL 包含 /v1，可手动输入模型名。";
+  }
+  if (text.includes("API key is required")) {
+    return "请先填写并保存 API key；如果服务不支持模型列表，也可以直接手动输入模型名。";
+  }
+  if (text.includes("timeout") || text.includes("timed out") || text.includes("超时")) {
+    return "模型列表请求超时：请检查网络或代理，可手动输入模型名。";
+  }
+  if (text.includes("request failed")) {
+    return `模型列表请求失败：${text}。请检查 base URL、网络或代理，可手动输入模型名。`;
+  }
+  return `${text}，可手动输入模型名`;
 }
 
 async function startJob() {
@@ -463,10 +527,47 @@ function renderJob(job) {
     acc[result.status] = (acc[result.status] || 0) + 1;
     return acc;
   }, {});
-  $("jobSummary").textContent = `任务 ${job.id}：${job.status}，成功 ${counts.success || 0}，失败 ${
-    counts.failed || 0
-  }，跳过 ${counts.skipped || 0}`;
+  const statusText = jobStatusText(job.status);
+  $("jobSummary").textContent = `任务 ${job.id}：${statusText}，成功 ${counts.success || 0}，失败 ${counts.failed || 0}，跳过 ${
+    counts.skipped || 0
+  }`;
+  if (job.error) {
+    $("jobSummary").textContent += `。失败原因：${job.error}`;
+  }
+  renderProgress(job);
   $("results").innerHTML = job.results.map(renderResult).join("");
+}
+
+function renderProgress(job) {
+  const progress = $("jobProgress");
+  const bar = $("jobProgressBar");
+  const total = scannedFiles.length || job.results.length || 0;
+  const done = job.results.filter((item) => ["success", "failed", "skipped"].includes(item.status)).length;
+  const percent = total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 0;
+  progress.hidden = !total;
+  bar.style.width = `${percent}%`;
+  bar.textContent = `${done}/${total} (${percent}%)`;
+}
+
+function jobStatusText(status) {
+  const labels = {
+    queued: "排队中",
+    running: "运行中",
+    completed: "已完成",
+    failed: "失败",
+    cancelled: "已取消",
+  };
+  return labels[status] || status;
+}
+
+function fileStatusText(status) {
+  const labels = {
+    pending: "等待中",
+    success: "成功",
+    failed: "失败",
+    skipped: "跳过",
+  };
+  return labels[status] || status;
 }
 
 function renderResult(result) {
@@ -474,7 +575,7 @@ function renderResult(result) {
   const target = result.target ? `<div class="path">输出：${escapeHtml(result.target)}</div>` : "";
   const error = result.error ? `<div class="error">${escapeHtml(result.error)}</div>` : "";
   return `<div class="result">
-    <span class="badge ${statusClass}">${escapeHtml(result.status)}</span>
+    <span class="badge ${statusClass}">${escapeHtml(fileStatusText(result.status))}</span>
     <div>
       <div class="path">源：${escapeHtml(result.source)}</div>
       ${target}
@@ -525,6 +626,11 @@ window.addEventListener("DOMContentLoaded", () => {
   $("saveAiConfig").addEventListener("click", saveAiConfig);
   $("refreshAiModels").addEventListener("click", refreshAiModels);
   $("pickLexiconFiles").addEventListener("click", async () => appendLexiconPaths(await pick("files")));
+  $("previewLexiconFiles").addEventListener("click", previewLexiconFiles);
+  $("lexiconFiles").addEventListener("input", () => {
+    window.clearTimeout(window.docformatLexiconTimer);
+    window.docformatLexiconTimer = window.setTimeout(previewLexiconFiles, 350);
+  });
   $("addLexiconRow").addEventListener("click", () => addLexiconRow());
   $("closePathBrowser").addEventListener("click", () => closePathBrowser([]));
   $("browserParent").addEventListener("click", () => {

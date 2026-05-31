@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>DocFormat</title>
+    <title>LocalDocFormatter</title>
     <link rel="stylesheet" href="/styles.css">
     <script src="/app-config.js"></script>
     <script defer src="/app.js"></script>
@@ -12,7 +12,7 @@
     <main class="shell">
       <section class="toolbar">
         <div>
-          <h1>DocFormat</h1>
+          <h1>LocalDocFormatter</h1>
           <p>本地批量转换 Office 文档，文件不离开当前机器。</p>
           <p id="runtimePathHint" class="hint runtime-hint"></p>
         </div>
@@ -90,9 +90,12 @@
           <div class="field spaced">
             <label for="lexiconFiles">修正词表文件路径</label>
             <textarea id="lexiconFiles" rows="3" placeholder="/Users/name/Documents/words.csv&#10;/Users/name/Documents/terms.json"></textarea>
+            <div class="hint">支持 CSV/TSV（列名：错误词,正确词）、JSON 对象、JSON 数组、JSONL、以及每行“错误词 =&gt; 正确词”的 TXT/MD。</div>
             <div class="actions">
               <button id="pickLexiconFiles" type="button">选择词表文件</button>
+              <button id="previewLexiconFiles" type="button">检查词表</button>
             </div>
+            <div id="lexiconPreview" class="lexicon-preview" hidden></div>
           </div>
 
           <div class="section-title lexicon-title">
@@ -140,6 +143,9 @@
           <button id="cancelJob" type="button" disabled>取消任务</button>
         </div>
         <div id="jobSummary" class="muted">暂无任务。</div>
+        <div id="jobProgress" class="progress-track" hidden>
+          <div id="jobProgressBar" class="progress-fill"></div>
+        </div>
         <div id="results" class="results"></div>
       </section>
 

@@ -17,12 +17,24 @@ class WebContractTests(unittest.TestCase):
         self.assertIn("runtimeInfo.container", script)
         self.assertIn("openPathBrowser", script)
         self.assertIn(".path-browser", styles)
+        self.assertIn('id="jobProgressBar"', index)
+        self.assertIn("<title>LocalDocFormatter</title>", index)
+        self.assertIn("progress-fill", styles)
+        self.assertIn("renderProgress", script)
+        self.assertIn('id="previewLexiconFiles"', index)
+        self.assertIn('id="lexiconPreview"', index)
+        self.assertIn("previewLexiconFiles", script)
+        self.assertIn("/api/ai/lexicon/preview", script)
+        self.assertIn("jobStatusText", script)
+        self.assertIn("fileStatusText", script)
+        self.assertIn(".lexicon-preview", styles)
 
     def test_ui_keeps_token_header_for_mutating_and_browse_calls(self):
         script = (WEB_DIR / "app.js").read_text(encoding="utf-8")
 
         self.assertIn('"X-DocFormat-Token": token', script)
         self.assertIn("fetch(path", script)
+        self.assertIn("friendlyModelRefreshError", script)
 
 
 if __name__ == "__main__":

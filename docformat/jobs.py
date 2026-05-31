@@ -22,6 +22,7 @@ from .converter import (
     unique_output_path,
 )
 from .text_correction import (
+    LexiconFileError,
     correct_srt_text,
     correct_text_with_client,
     load_lexicon_file,
@@ -194,12 +195,12 @@ class JobManager:
         files = self.collect_files(job.sources, job.recursive)
         base_roots = [_source_base(Path(source).expanduser()) for source in job.sources]
         correction_client = self.correction_client_factory(correction_config) if correction_config and self.correction_client_factory else None
-        user_lexicon = _collect_user_lexicon(correction_user_lexicon, correction_entries, correction_lexicon_files)
-        file_option_map = _file_option_map(file_options)
-        if file_option_map:
-            files = [path for path in files if str(path) in file_option_map]
-
         try:
+            user_lexicon = _collect_user_lexicon(correction_user_lexicon, correction_entries, correction_lexicon_files)
+            file_option_map = _file_option_map(file_options)
+            if file_option_map:
+                files = [path for path in files if str(path) in file_option_map]
+
             for source in files:
                 if job.cancelled:
                     job.results.append(FileResult(source=str(source), status="skipped", error="Job cancelled"))
@@ -259,7 +260,7 @@ class JobManager:
                             correction_prompt,
                         )
                         result.status = "success"
-                    except ConversionError as exc:
+                    except Exception as exc:  # noqa: BLE001 - per-file failures must not abort the whole job.
                         result.status = "failed"
                         result.error = str(exc)
                     finally:
@@ -478,8 +479,10 @@ def _collect_user_lexicon(
     pairs.extend(normalize_lexicon_entries(entries))
     for file_path in file_paths or []:
         path = Path(str(file_path)).expanduser()
-        if path.exists() and path.is_file():
+        try:
             pairs.extend(load_lexicon_file(path))
+        except LexiconFileError:
+            raise
     return pairs
 
 

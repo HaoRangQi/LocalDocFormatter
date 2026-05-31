@@ -125,6 +125,33 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(json.loads(body)["models"], ["gpt-a", "gpt-b"])
         self.assertNotIn("sk-secret-value", body)
 
+    def test_ai_lexicon_preview_reads_files_and_reports_errors(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            lexicon_path = root / "words.csv"
+            lexicon_path.write_text("错误词,正确词\n在见,再见\nopen ai,OpenAI\n", encoding="utf-8")
+            empty_path = root / "empty.csv"
+            empty_path.write_text("错误词,正确词\n", encoding="utf-8")
+            app = create_app(token="test-token", soffice_path=None, run_async=False, ai_config_path=root / "ai.json")
+
+            status, headers, body = app.handle_json(
+                "POST",
+                "/api/ai/lexicon/preview",
+                {"paths": [str(lexicon_path), str(empty_path), str(root / "missing.csv")]},
+                {"X-DocFormat-Token": "test-token"},
+            )
+
+        self.assertEqual(status, 200)
+        payload = json.loads(body)
+        self.assertEqual(payload["totalValidEntries"], 2)
+        self.assertEqual(payload["files"][0]["status"], "success")
+        self.assertEqual(payload["files"][0]["count"], 2)
+        self.assertEqual(payload["files"][0]["sample"][0], {"wrong": "在见", "correct": "再见"})
+        self.assertEqual(payload["files"][1]["status"], "failed")
+        self.assertIn("没有读取到有效词条", payload["files"][1]["error"])
+        self.assertEqual(payload["files"][2]["status"], "failed")
+        self.assertIn("词表文件不存在", payload["files"][2]["error"])
+
     def test_ai_correction_job_api_uses_token_and_returns_corrected_text(self):
         class FakeClient:
             def __init__(self, base_url, api_key):

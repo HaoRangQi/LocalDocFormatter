@@ -160,6 +160,61 @@ LocalDocFormatter 支持通过 OpenAI-compatible API 修正常见语音转写错
 
 文件修正输出为 `name.corrected.ext`，写在源文件旁且不覆盖原文件。`.srt` 会保留字幕序号和时间轴。
 
+### 词表文件格式
+
+转换时勾选“转换时先做 AI 错别字修正”后，可以选择词表文件，也可以在页面表格里手动添加词条。词表用于提示 AI 将常见误识别内容按指定方向修正。
+
+支持以下文件格式，文件编码请使用 UTF-8：
+
+CSV：
+
+```csv
+错误词,正确词
+在见,再见
+open ai,OpenAI
+```
+
+TSV：
+
+```text
+错误词	正确词
+阿里妈妈	阿里巴巴
+```
+
+JSON 对象：
+
+```json
+{
+  "在见": "再见",
+  "open ai": "OpenAI"
+}
+```
+
+JSON 数组：
+
+```json
+[
+  {"wrong": "在见", "correct": "再见"},
+  {"key": "open ai", "value": "OpenAI"}
+]
+```
+
+JSONL：
+
+```jsonl
+{"wrong": "在见", "correct": "再见"}
+{"key": "open ai", "value": "OpenAI"}
+```
+
+TXT/MD：
+
+```text
+在见 => 再见
+open ai => OpenAI
+```
+
+页面里的“检查词表”会读取词表文件并显示每个文件读取到的条数、前 5 条样例和失败原因。任务启动时如果词表文件不存在、编码错误、JSON/CSV 解析失败或没有有效词条，任务会失败并把原因写入页面和 `conversion-report.json`。
+
 AI 配置默认保存在：
 
 ```text
@@ -220,6 +275,93 @@ python3 -m unittest discover -s tests
 ```text
 docs/QA_REPORT_2026-05-30.md
 ```
+
+## 开发环境启动
+
+本节用于本地开发和调试，按步骤执行即可。
+
+### 1. 前置检查
+
+1. 确认在项目根目录（包含 `docformat/`、`README.md`、`docker-compose.yml`）。
+2. 本机开发模式：确认 Python 可用。
+
+```bash
+python3 --version
+```
+
+3. Docker 开发模式：确认 Docker daemon 可用。
+
+```bash
+docker version
+```
+
+4. 确认端口可用（默认 `8765`）。
+
+```bash
+lsof -i :8765
+```
+
+如果有占用，请先停止占用进程或改用其他端口。
+
+### 2. 启动方式 A（本机开发）
+
+```bash
+DOCFORMAT_NO_BROWSER=1 DOCFORMAT_PORT=8765 python3 -m docformat
+```
+
+可选：端口冲突时改端口。
+
+```bash
+DOCFORMAT_NO_BROWSER=1 DOCFORMAT_PORT=8898 python3 -m docformat
+```
+
+### 3. 启动方式 B（Docker 开发）
+
+```bash
+docker compose up --build
+```
+
+如需后台运行：
+
+```bash
+docker compose up --build -d
+```
+
+### 4. 启动成功验证
+
+浏览器访问：
+
+```text
+http://127.0.0.1:8765
+```
+
+或用健康检查接口：
+
+```bash
+curl http://127.0.0.1:8765/api/health
+```
+
+### 5. 停止与清理
+
+本机开发模式：在前台终端按 `Ctrl + C`。
+
+Docker 前台模式：
+
+```bash
+docker compose down
+```
+
+Docker 后台模式：
+
+```bash
+docker compose down
+```
+
+### 6. 常见问题
+
+1. 端口占用：改 `DOCFORMAT_PORT` 或调整 `docker-compose.yml` 端口映射。
+2. Docker 无法连接 daemon：先启动 Docker Desktop 或 OrbStack。
+3. 无法转换：检查 LibreOffice 是否就绪，或在 Docker 模式使用内置 LibreOffice。
 
 ## 致谢
 
