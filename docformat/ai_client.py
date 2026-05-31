@@ -141,6 +141,8 @@ def _append_chat_completion_event(payload: str, chunks: list[str]) -> bool:
         delta = choice.get("delta")
         if isinstance(delta, dict) and isinstance(delta.get("content"), str):
             chunks.append(delta["content"])
+        if isinstance(delta, dict) and isinstance(delta.get("refusal"), str):
+            chunks.append(delta["refusal"])
         message = choice.get("message")
         if isinstance(message, dict) and isinstance(message.get("content"), str):
             chunks.append(message["content"])

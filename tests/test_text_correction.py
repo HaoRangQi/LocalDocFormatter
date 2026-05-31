@@ -33,6 +33,7 @@ class TextCorrectionTests(unittest.TestCase):
     def test_custom_prompt_overrides_default_system_prompt(self):
         messages = build_correction_messages("这个是转译文稿", [], system_prompt="只修错别字")
 
+        self.assertEqual(messages[0]["role"], "system")
         self.assertEqual(messages[0]["content"], "只修错别字")
 
     def test_normalize_lexicon_entries_accepts_key_value_rows(self):

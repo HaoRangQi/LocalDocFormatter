@@ -27,6 +27,7 @@ class FakeOpenAIHandler(BaseHTTPRequestHandler):
                     {"choices": [{"delta": {"role": "assistant"}}]},
                     {"choices": [{"delta": {"content": "修正后"}}]},
                     {"choices": [{"delta": {"content": "文本"}}]},
+                    {"choices": [{"delta": {"refusal": ""}}]},
                     "[DONE]",
                 ],
             )
@@ -88,6 +89,7 @@ class ClientTests(unittest.TestCase):
         self.assertEqual(request_body["model"], "gpt-a")
         self.assertEqual(request_body["temperature"], 0)
         self.assertTrue(request_body["stream"])
+        self.assertEqual(FakeOpenAIHandler.requests[-1][0:3], ("POST", "/v1/chat/completions", "Bearer sk-test"))
 
     def test_http_errors_are_sanitized(self):
         client = OpenAICompatibleClient(self.base_url, "sk-secret")
