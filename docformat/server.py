@@ -185,7 +185,7 @@ class DocFormatApp:
             self.ai_config_store.save(base_url, api_key, selected_model)
             return self._json(HTTPStatus.OK, self.ai_config_store.public_config())
 
-        if route == "/api/ai/models/refresh" and method == "POST":
+        if route in {"/api/ai/models", "/api/ai/models/refresh"} and method == "POST":
             config = self.ai_config_store.load()
             if not config.api_key:
                 return self._json(HTTPStatus.BAD_REQUEST, {"error": "API key is required"})

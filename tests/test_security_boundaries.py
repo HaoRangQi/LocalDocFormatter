@@ -71,7 +71,7 @@ class SecurityBoundaryTests(unittest.TestCase):
             )
             status, headers, body = app.handle_json(
                 "POST",
-                "/api/ai/models/refresh",
+                "/api/ai/models",
                 {},
                 {"X-DocFormat-Token": "test-token"},
             )

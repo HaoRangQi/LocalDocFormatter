@@ -245,7 +245,7 @@ https://your-relay.example.com/v1
 - `GET /api/browse?path=...`
 - `GET /api/ai/config`
 - `POST /api/ai/config`
-- `POST /api/ai/models/refresh`
+- `POST /api/ai/models`
 - `POST /api/ai/correction-jobs`
 - `GET /api/ai/correction-jobs/{id}`
 - `POST /api/ai/correction-jobs/{id}/cancel`
