@@ -536,7 +536,7 @@ def _nearest_root(path: Path, roots: list[Path]) -> Path | None:
 
 def main() -> None:
     host = os.environ.get("DOCFORMAT_HOST", "127.0.0.1")
-    port = int(os.environ.get("DOCFORMAT_PORT", "8765"))
+    port = int(os.environ.get("DOCFORMAT_PORT", "38173"))
     app = create_app()
 
     class BoundHandler(RequestHandler):

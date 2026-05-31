@@ -21,7 +21,7 @@ class DockerConfigTests(unittest.TestCase):
     def test_compose_binds_localhost_and_mounts_data_workspace(self):
         compose = (ROOT / "docker-compose.yml").read_text(encoding="utf-8")
 
-        self.assertIn("127.0.0.1:8765:8765", compose)
+        self.assertIn("127.0.0.1:38173:38173", compose)
         self.assertIn("DOCFORMAT_CONTAINER: \"1\"", compose)
         self.assertIn("DOCFORMAT_WORKSPACE_ROOTS: \"/workspace\"", compose)
         self.assertIn("./docker-data:/data", compose)

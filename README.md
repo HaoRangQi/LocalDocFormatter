@@ -29,7 +29,7 @@ cd <repo-dir>
 1. 先安装并启动 Docker Desktop 或 OrbStack。
 2. 在终端确认 Docker daemon 可用：`docker version`。
 3. 进入项目目录（即包含 `Dockerfile` 与 `docker-compose.yml` 的目录）。
-4. 确认本机 `8765` 端口未被占用（若占用请调整 `docker-compose.yml` 端口映射）。
+4. 确认本机 `38173` 端口未被占用（若占用请调整 `docker-compose.yml` 端口映射）。
 
 启动步骤：
 
@@ -42,7 +42,7 @@ docker compose up --build
 2. 打开浏览器访问：
 
 ```text
-http://127.0.0.1:8765
+http://127.0.0.1:38173
 ```
 
 默认 `docker-compose.yml` 挂载：
@@ -76,7 +76,7 @@ volumes:
 ```bash
 docker build -t localdocformatter:local .
 docker run --rm \
-  -p 127.0.0.1:8765:8765 \
+  -p 127.0.0.1:38173:38173 \
   -v "$PWD/docker-data:/data" \
   -v "$HOME/Documents:/workspace/Documents" \
   -v "$HOME/Downloads:/workspace/Downloads" \
@@ -86,7 +86,7 @@ docker run --rm \
 常用容器环境变量：
 
 ```text
-DOCFORMAT_PORT=8765
+DOCFORMAT_PORT=38173
 DOCFORMAT_WORKSPACE_ROOTS=/workspace
 DOCFORMAT_AI_CONFIG_PATH=/data/ai-config.json
 ```
@@ -108,8 +108,8 @@ python3 -m docformat
 常用环境变量：
 
 ```bash
-DOCFORMAT_PORT=8765 python3 -m docformat
-DOCFORMAT_HOST=0.0.0.0 DOCFORMAT_PORT=8765 python3 -m docformat
+DOCFORMAT_PORT=38173 python3 -m docformat
+DOCFORMAT_HOST=0.0.0.0 DOCFORMAT_PORT=38173 python3 -m docformat
 DOCFORMAT_NO_BROWSER=1 python3 -m docformat
 ```
 
@@ -295,10 +295,10 @@ python3 --version
 docker version
 ```
 
-4. 确认端口可用（默认 `8765`）。
+4. 确认端口可用（默认 `38173`）。
 
 ```bash
-lsof -i :8765
+lsof -i :38173
 ```
 
 如果有占用，请先停止占用进程或改用其他端口。
@@ -306,13 +306,13 @@ lsof -i :8765
 ### 2. 启动方式 A（本机开发）
 
 ```bash
-DOCFORMAT_NO_BROWSER=1 DOCFORMAT_PORT=8765 python3 -m docformat
+DOCFORMAT_NO_BROWSER=1 DOCFORMAT_PORT=38173 python3 -m docformat
 ```
 
-可选：端口冲突时改端口。
+默认固定使用 `38173`，避免开发和使用时地址来回变化。只有确认端口冲突时才临时改端口，例如：
 
 ```bash
-DOCFORMAT_NO_BROWSER=1 DOCFORMAT_PORT=8898 python3 -m docformat
+DOCFORMAT_NO_BROWSER=1 DOCFORMAT_PORT=38174 python3 -m docformat
 ```
 
 ### 3. 启动方式 B（Docker 开发）
@@ -332,13 +332,13 @@ docker compose up --build -d
 浏览器访问：
 
 ```text
-http://127.0.0.1:8765
+http://127.0.0.1:38173
 ```
 
 或用健康检查接口：
 
 ```bash
-curl http://127.0.0.1:8765/api/health
+curl http://127.0.0.1:38173/api/health
 ```
 
 ### 5. 停止与清理

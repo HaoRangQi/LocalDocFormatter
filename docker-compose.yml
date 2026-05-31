@@ -3,10 +3,10 @@ services:
     build: .
     image: docformat:local
     ports:
-      - "127.0.0.1:8765:8765"
+      - "127.0.0.1:38173:38173"
     environment:
       DOCFORMAT_HOST: "0.0.0.0"
-      DOCFORMAT_PORT: "8765"
+      DOCFORMAT_PORT: "38173"
       DOCFORMAT_NO_BROWSER: "1"
       DOCFORMAT_CONTAINER: "1"
       DOCFORMAT_WORKSPACE_ROOTS: "/workspace"
@@ -16,7 +16,7 @@ services:
       - ~/Documents:/workspace/Documents
       - ~/Downloads:/workspace/Downloads
     healthcheck:
-      test: ["CMD", "python", "-c", "import json, urllib.request; json.load(urllib.request.urlopen('http://127.0.0.1:8765/api/health', timeout=3))"]
+      test: ["CMD", "python", "-c", "import json, urllib.request; json.load(urllib.request.urlopen('http://127.0.0.1:38173/api/health', timeout=3))"]
       interval: 30s
       timeout: 5s
       retries: 3
