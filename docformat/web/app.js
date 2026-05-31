@@ -2,6 +2,8 @@ const token = window.DOCFORMAT_TOKEN;
 let currentJobId = null;
 let pollTimer = null;
 let scannedFiles = [];
+let savedApiKeyMasked = "";
+let apiKeyRevealed = false;
 let runtimeInfo = { container: false, workspaceRoots: [], pathHint: "" };
 let pathBrowserState = {
   mode: "files",
@@ -402,25 +404,65 @@ async function loadAiConfig() {
     const config = await api("/api/ai/config", { method: "GET" });
     $("aiBaseUrl").value = config.baseUrl || "https://api.openai.com/v1";
     $("aiModel").value = config.selectedModel || "";
+    applyMaskedApiKey(config);
     $("aiConfigStatus").textContent = config.hasApiKey ? `已保存 key：${config.apiKeyMasked}` : "未保存 API key";
   } catch (error) {
     $("aiConfigStatus").textContent = error.message;
   }
 }
 
+function applyMaskedApiKey(config) {
+  savedApiKeyMasked = config.hasApiKey ? config.apiKeyMasked || "" : "";
+  apiKeyRevealed = false;
+  $("aiApiKey").type = "password";
+  $("aiApiKey").value = savedApiKeyMasked;
+  $("aiApiKey").placeholder = config.hasApiKey ? "已保存 API key" : "未保存 API key";
+  $("toggleApiKeyVisibility").textContent = "👁";
+  $("toggleApiKeyVisibility").title = config.hasApiKey ? "显示 API Key" : "暂无已保存 API Key";
+}
+
 async function saveAiConfig() {
   $("aiConfigStatus").textContent = "保存中...";
+  const currentValue = $("aiApiKey").value.trim();
+  const apiKey = currentValue === savedApiKeyMasked ? "" : currentValue;
   try {
     const config = await api("/api/ai/config", {
       method: "POST",
       body: JSON.stringify({
         baseUrl: $("aiBaseUrl").value.trim(),
-        apiKey: $("aiApiKey").value,
+        apiKey,
         selectedModel: $("aiModel").value.trim(),
       }),
     });
-    $("aiApiKey").value = "";
+    applyMaskedApiKey(config);
     $("aiConfigStatus").textContent = config.hasApiKey ? `已保存 key：${config.apiKeyMasked}` : "未保存 API key";
+  } catch (error) {
+    $("aiConfigStatus").textContent = error.message;
+  }
+}
+
+async function toggleApiKeyVisibility() {
+  const input = $("aiApiKey");
+  if (apiKeyRevealed) {
+    input.type = "password";
+    input.value = savedApiKeyMasked;
+    apiKeyRevealed = false;
+    $("toggleApiKeyVisibility").textContent = "👁";
+    $("toggleApiKeyVisibility").title = savedApiKeyMasked ? "显示 API Key" : "暂无已保存 API Key";
+    return;
+  }
+  try {
+    const payload = await api("/api/ai/config/key", { method: "GET" });
+    if (!payload.hasApiKey) {
+      $("aiConfigStatus").textContent = "未保存 API key";
+      return;
+    }
+    input.type = "text";
+    input.value = payload.apiKey || "";
+    apiKeyRevealed = true;
+    $("toggleApiKeyVisibility").textContent = "🙈";
+    $("toggleApiKeyVisibility").title = "隐藏 API Key";
+    $("aiConfigStatus").textContent = "API key 已显示，可复查。";
   } catch (error) {
     $("aiConfigStatus").textContent = error.message;
   }
@@ -625,6 +667,7 @@ window.addEventListener("DOMContentLoaded", () => {
   $("cancelJob").addEventListener("click", cancelJob);
   $("saveAiConfig").addEventListener("click", saveAiConfig);
   $("refreshAiModels").addEventListener("click", refreshAiModels);
+  $("toggleApiKeyVisibility").addEventListener("click", toggleApiKeyVisibility);
   $("pickLexiconFiles").addEventListener("click", async () => appendLexiconPaths(await pick("files")));
   $("previewLexiconFiles").addEventListener("click", previewLexiconFiles);
   $("lexiconFiles").addEventListener("input", () => {

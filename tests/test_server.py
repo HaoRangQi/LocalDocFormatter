@@ -91,6 +91,25 @@ class ServerTests(unittest.TestCase):
             self.assertTrue(payload["hasApiKey"])
             self.assertEqual(payload["selectedModel"], "gpt-test")
 
+    def test_ai_config_key_reveal_api_requires_token_and_returns_saved_key(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            app = create_app(token="test-token", soffice_path=None, run_async=False, ai_config_path=Path(tmp) / "ai.json")
+            app.handle_json(
+                "POST",
+                "/api/ai/config",
+                {"baseUrl": "https://relay.example.com/v1", "apiKey": "sk-secret-value", "selectedModel": "gpt-test"},
+                {"X-DocFormat-Token": "test-token"},
+            )
+
+            denied_status, headers, denied_body = app.handle_json("GET", "/api/ai/config/key", None, {})
+            status, headers, body = app.handle_json("GET", "/api/ai/config/key", None, {"X-DocFormat-Token": "test-token"})
+
+        self.assertEqual(denied_status, 403)
+        self.assertEqual(status, 200)
+        payload = json.loads(body)
+        self.assertTrue(payload["hasApiKey"])
+        self.assertEqual(payload["apiKey"], "sk-secret-value")
+
     def test_ai_models_refresh_uses_configured_client(self):
         class FakeClient:
             def __init__(self, base_url, api_key):

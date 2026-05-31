@@ -122,6 +122,19 @@ h2 {
   gap: 8px;
 }
 
+.secret-field {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) 44px;
+}
+
+.secret-toggle {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 18px;
+  min-height: 42px;
+}
+
 label {
   font-weight: 650;
   font-size: 14px;

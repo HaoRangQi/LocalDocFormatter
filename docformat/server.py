@@ -171,6 +171,10 @@ class DocFormatApp:
         if route == "/api/ai/config" and method == "GET":
             return self._json(HTTPStatus.OK, self.ai_config_store.public_config())
 
+        if route == "/api/ai/config/key" and method == "GET":
+            config = self.ai_config_store.load()
+            return self._json(HTTPStatus.OK, {"hasApiKey": bool(config.api_key), "apiKey": config.api_key})
+
         if route == "/api/ai/config" and method == "POST":
             payload = payload or {}
             base_url = str(payload.get("baseUrl") or "").strip()

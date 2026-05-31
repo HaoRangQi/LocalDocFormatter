@@ -29,6 +29,24 @@ class SecurityBoundaryTests(unittest.TestCase):
         self.assertNotIn("sk-sensitive-value", body)
         self.assertIn("apiKeyMasked", payload)
 
+    def test_ai_config_key_reveal_is_separate_from_public_config(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            app = create_app(token="test-token", soffice_path=None, run_async=False, ai_config_path=Path(tmp) / "ai.json")
+            app.handle_json(
+                "POST",
+                "/api/ai/config",
+                {"baseUrl": "https://relay.example.com/v1", "apiKey": "sk-sensitive-value", "selectedModel": "gpt-test"},
+                {"X-DocFormat-Token": "test-token"},
+            )
+
+            public_status, headers, public_body = app.handle_json("GET", "/api/ai/config", None, {"X-DocFormat-Token": "test-token"})
+            reveal_status, headers, reveal_body = app.handle_json("GET", "/api/ai/config/key", None, {"X-DocFormat-Token": "test-token"})
+
+        self.assertEqual(public_status, 200)
+        self.assertEqual(reveal_status, 200)
+        self.assertNotIn("sk-sensitive-value", public_body)
+        self.assertIn("sk-sensitive-value", reveal_body)
+
     def test_model_refresh_error_does_not_leak_api_key(self):
         class FailingClient:
             def __init__(self, base_url, api_key):

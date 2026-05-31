@@ -68,7 +68,10 @@
             </div>
             <div class="field">
               <label for="aiApiKey">API Key</label>
-              <input id="aiApiKey" type="password" placeholder="留空则保留已保存 key">
+              <div class="secret-field">
+                <input id="aiApiKey" type="password" autocomplete="off" placeholder="未保存 API key">
+                <button id="toggleApiKeyVisibility" type="button" class="icon-button secret-toggle" title="显示或隐藏 API Key">👁</button>
+              </div>
             </div>
             <div class="field">
               <label for="aiModel">模型</label>
