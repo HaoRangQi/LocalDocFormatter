@@ -47,7 +47,7 @@ class SecurityBoundaryTests(unittest.TestCase):
         self.assertNotIn("sk-sensitive-value", public_body)
         self.assertIn("sk-sensitive-value", reveal_body)
 
-    def test_model_refresh_error_does_not_leak_api_key(self):
+    def test_v1_models_error_does_not_leak_api_key(self):
         class FailingClient:
             def __init__(self, base_url, api_key):
                 self.api_key = api_key
@@ -70,9 +70,9 @@ class SecurityBoundaryTests(unittest.TestCase):
                 {"X-DocFormat-Token": "test-token"},
             )
             status, headers, body = app.handle_json(
-                "POST",
-                "/api/ai/models",
-                {},
+                "GET",
+                "/v1/models",
+                None,
                 {"X-DocFormat-Token": "test-token"},
             )
 

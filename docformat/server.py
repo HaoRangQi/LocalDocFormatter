@@ -50,6 +50,9 @@ class DocFormatApp:
         if method == "GET" and route == "/api/health":
             return self._json(HTTPStatus.OK, self.health_payload())
 
+        if method == "GET" and route == "/v1/models":
+            return self._handle_ai_models(headers)
+
         if route.startswith("/api/ai/"):
             return self._handle_ai(method, route, payload, headers)
 
@@ -185,16 +188,6 @@ class DocFormatApp:
             self.ai_config_store.save(base_url, api_key, selected_model)
             return self._json(HTTPStatus.OK, self.ai_config_store.public_config())
 
-        if route in {"/api/ai/models", "/api/ai/models/refresh"} and method == "POST":
-            config = self.ai_config_store.load()
-            if not config.api_key:
-                return self._json(HTTPStatus.BAD_REQUEST, {"error": "API key is required"})
-            try:
-                models = self.ai_client_class(config.base_url, config.api_key).list_models()
-            except OpenAICompatibleError as exc:
-                return self._json(HTTPStatus.BAD_GATEWAY, {"error": sanitize_error(str(exc), config.api_key)})
-            return self._json(HTTPStatus.OK, {"models": models})
-
         if route == "/api/ai/lexicon/preview" and method == "POST":
             payload = payload or {}
             paths = payload.get("paths") or []
@@ -245,6 +238,18 @@ class DocFormatApp:
                 return self._json(HTTPStatus.OK, {"cancelled": cancelled, "job": ai_job_to_dict(job)})
 
         return self._json(HTTPStatus.NOT_FOUND, {"error": "Not found"})
+
+    def _handle_ai_models(self, headers: dict[str, str]) -> tuple[int, dict[str, str], str]:
+        if not self._authorized(headers):
+            return self._json(HTTPStatus.FORBIDDEN, {"error": "Invalid local token"})
+        config = self.ai_config_store.load()
+        if not config.api_key:
+            return self._json(HTTPStatus.BAD_REQUEST, {"error": "API key is required"})
+        try:
+            models = self.ai_client_class(config.base_url, config.api_key).list_models()
+        except OpenAICompatibleError as exc:
+            return self._json(HTTPStatus.BAD_GATEWAY, {"error": sanitize_error(str(exc), config.api_key)})
+        return self._json(HTTPStatus.OK, {"models": models})
 
     def health_payload(self) -> dict:
         info = discover_soffice()
@@ -310,7 +315,7 @@ class RequestHandler(BaseHTTPRequestHandler):
     app: DocFormatApp
 
     def do_GET(self) -> None:  # noqa: N802 - stdlib API
-        if self.path.startswith("/api/"):
+        if self.path.startswith(("/api/", "/v1/")):
             self._handle_api(None)
         else:
             self._serve_static()

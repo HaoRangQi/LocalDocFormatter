@@ -245,7 +245,7 @@ https://your-relay.example.com/v1
 - `GET /api/browse?path=...`
 - `GET /api/ai/config`
 - `POST /api/ai/config`
-- `POST /api/ai/models`
+- `GET /v1/models`：本地模型列表代理，按 OpenAI Models API 形态请求，再转发到配置的 `{base_url}/models`
 - `POST /api/ai/correction-jobs`
 - `GET /api/ai/correction-jobs/{id}`
 - `POST /api/ai/correction-jobs/{id}/cancel`

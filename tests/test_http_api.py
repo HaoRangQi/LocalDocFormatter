@@ -16,6 +16,7 @@ class HTTPAPITests(unittest.TestCase):
         self.root = Path(self.tmp.name)
         self.token = "test-token"
         app = create_app(token=self.token, soffice_path=None, run_async=False, ai_config_path=self.root / "ai.json")
+        self.app = app
 
         class BoundHandler(RequestHandler):
             pass
@@ -87,6 +88,26 @@ class HTTPAPITests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(payload["count"], 2)
         self.assertEqual([item["name"] for item in payload["files"]], ["a.doc", "b.xls"])
+
+    def test_v1_models_is_served_as_json_api_over_http(self):
+        class FakeClient:
+            def __init__(self, base_url, api_key):
+                self.base_url = base_url
+                self.api_key = api_key
+
+            def list_models(self):
+                return ["gpt-a", "gpt-b"]
+
+        self.app.ai_client_class = FakeClient
+        self.post_json(
+            "/api/ai/config",
+            {"baseUrl": "https://relay.example.com/v1", "apiKey": "sk-secret-value", "selectedModel": "gpt-a"},
+        )
+
+        status, payload = self.get_json("/v1/models")
+
+        self.assertEqual(status, 200)
+        self.assertEqual(payload["models"], ["gpt-a", "gpt-b"])
 
     def test_invalid_json_returns_400(self):
         parsed = http.client.urlsplit(self.base_url)

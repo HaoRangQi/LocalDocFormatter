@@ -485,7 +485,7 @@ async function testAiConfig() {
   setAiConfigStatus("检测中...", "pending");
   try {
     await saveAiConfig();
-    const payload = await api("/api/ai/models", { method: "POST", body: "{}" });
+    const payload = await api("/v1/models", { method: "GET" });
     setModelOptions(payload.models || [], $("aiModel").value.trim());
     setAiConfigStatus(`检测通过，获取到 ${payload.models.length} 个模型。`, "success");
   } catch (error) {
@@ -524,7 +524,7 @@ async function refreshAiModels() {
   setAiConfigStatus("探索模型中...", "pending");
   try {
     await saveAiConfig();
-    const payload = await api("/api/ai/models", { method: "POST", body: "{}" });
+    const payload = await api("/v1/models", { method: "GET" });
     setModelOptions(payload.models || [], $("aiModel").value.trim());
     setAiConfigStatus(`找到 ${payload.models.length} 个模型`, "success");
   } catch (error) {

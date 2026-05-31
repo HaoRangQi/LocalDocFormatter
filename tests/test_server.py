@@ -110,7 +110,7 @@ class ServerTests(unittest.TestCase):
         self.assertTrue(payload["hasApiKey"])
         self.assertEqual(payload["apiKey"], "sk-secret-value")
 
-    def test_ai_models_refresh_uses_configured_client(self):
+    def test_v1_models_uses_configured_client(self):
         class FakeClient:
             def __init__(self, base_url, api_key):
                 self.base_url = base_url
@@ -134,15 +134,27 @@ class ServerTests(unittest.TestCase):
                 {"X-DocFormat-Token": "test-token"},
             )
             status, headers, body = app.handle_json(
-                "POST",
-                "/api/ai/models",
-                {},
+                "GET",
+                "/v1/models",
+                None,
                 {"X-DocFormat-Token": "test-token"},
             )
 
         self.assertEqual(status, 200)
         self.assertEqual(json.loads(body)["models"], ["gpt-a", "gpt-b"])
         self.assertNotIn("sk-secret-value", body)
+
+    def test_old_ai_models_endpoint_is_not_supported(self):
+        app = create_app(token="test-token", soffice_path=None, run_async=False)
+
+        status, headers, body = app.handle_json(
+            "POST",
+            "/api/ai/models",
+            {},
+            {"X-DocFormat-Token": "test-token"},
+        )
+
+        self.assertEqual(status, 404)
 
     def test_ai_lexicon_preview_reads_files_and_reports_errors(self):
         with tempfile.TemporaryDirectory() as tmp:
